@@ -15,6 +15,23 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Multi-tab sync**: changes in one tab show up in other open tabs.
 - **Sample data** button on the empty dashboard so you can explore right away.
 
+### Share & sync
+
+A cloud-style hub at **Share & sync** (also **Share report** on the dashboard) for getting data out of Ledgerly and to the people and apps that need it.
+
+- **Templates** shape the same data for different jobs: Monthly Summary, Category Analysis, Tax Report (quarterly totals plus an itemized ledger) and Full Backup.
+- **A three-step composer** (content, destination, details) slides in from the side and previews what each destination will receive: a spreadsheet grid, an email, a Slack message.
+- **Share links with QR codes.** The report is compressed into the link itself, after the `#`, so it never touches a server. Add a password and it is encrypted with AES-256 (key derived with PBKDF2) before it goes into the link. Links can expire, can carry totals only, and open on a read-only report page where the recipient can download the data or import it into their own Ledgerly.
+- **Copy as table** puts every table on the clipboard so it pastes into Google Sheets, Excel or Numbers as cells.
+- **Connected apps:** Google Sheets, Google Drive, Dropbox, OneDrive and Slack, with a consent screen, per-app status, and **live sync** that pushes changes in the background after you edit an expense.
+- **Automations** run recurring exports daily, weekly or monthly. Missed runs catch up once the next time the app is open.
+- **Activity tray** follows background jobs across pages with live progress, like a cloud drive's upload panel. The header shows backup and sync status.
+- **History** of every export, share and sync, filterable, with one-click re-runs and retries.
+- **Version history:** Ledgerly saves a version after you make changes (the last 12) and restores any of them with undo. Backup files can be downloaded and restored on another device, merging without duplicates.
+- **Suggestions** on the overview react to the date and your data, such as sharing last month's summary early in the month, tax reports in tax season, or a category that's climbing.
+
+**What's real and what's simulated.** Email delivery and the five connected apps are simulated: you see the complete flow and a realistic background job, but nothing is sent to those services, and the UI labels them. Everything else is fully working: downloads, copy as table, share links, encryption, QR codes, the shared report page and its import, automations' scheduling, version history, and backup files. The email step also offers a real "open in your email app" link.
+
 ## Running it
 
 Requires Node.js 26 or newer. The version is pinned in `.nvmrc`, so with nvm, fnm or a similar version manager you can just run `nvm use` in the project folder. `.npmrc` turns on `engine-strict`, so `npm install` stops with a clear error on an older Node instead of half-working.
@@ -80,8 +97,15 @@ How it works:
 9. **Search and filters.** On **Expenses**, type `gas` in search, choose a category, click a preset such as **Last month**, or pick custom dates. The count and total update. **Clear filters** resets them.
 10. **Sort.** Switch between newest, oldest, highest and lowest amount.
 11. **Export.** Click **Export CSV**. The downloaded file contains exactly the rows currently shown.
-12. **Mobile.** Narrow the browser or use device mode in dev tools. Use the bottom bar and the round **+** button.
-13. **Keyboard.** Dialogs open with focus on the first field, trap Tab inside, and close with Escape.
+12. **Share & sync.** Open **Share & sync** from the header.
+    - Click **New export**, keep Monthly Summary, choose **Download** and download the CSV. It lands in **History**.
+    - Use **Share a link**, set a password and create the link. Open it with **Open preview**: a wrong password is rejected and the right one shows the report. Scan the QR code with a phone on the same network if the app is reachable there.
+    - Use **Email a report**, add two addresses and send. Watch the activity tray in the corner finish the job.
+    - Under **Apps**, connect Google Sheets and turn on live sync. Add an expense: a "Live sync" job appears a couple of seconds later.
+    - Under **Automations**, create one from a recipe and click **Run now**. Disconnect its app and run it again to see a failure in the tray and in History.
+    - Under **Backups**, restore an older version, then click **Undo** in the notification. Download a full backup and restore it from the file.
+13. **Mobile.** Narrow the browser or use device mode in dev tools. Use the bottom bar and the round **+** button.
+14. **Keyboard.** Dialogs open with focus on the first field, trap Tab inside, and close with Escape.
 
 To reset all data, run this in the browser console:
 
@@ -97,13 +121,16 @@ src/
     layout.tsx            Root layout, font, app shell
     page.tsx              Dashboard
     expenses/page.tsx     Expense list with filters and export
+    share/page.tsx        Share & sync hub
+    r/page.tsx            Read-only page that opens shared report links
     not-found.tsx
   components/
     layout/AppShell.tsx   Header, mobile nav, providers, storage error banner
     providers/            Expense state, toast notifications, add/edit/delete dialogs
     expenses/             Form, list, filter bar
     dashboard/            Summary cards and charts
-    ui/                   Button, Card, Modal, Skeleton, icons, badges
+    cloud/                Share & sync: provider (jobs, sync, automations, versions), composer, tray, hub tabs
+    ui/                   Button, Card, Modal, Drawer, Skeleton, icons, badges
   lib/
     types.ts              Expense types and categories
     storage.ts            localStorage load/save with validation
@@ -111,6 +138,7 @@ src/
     analytics.ts          Filtering, sorting, totals, stats, sample data
     csv.ts                CSV generation and download
     format.ts             Currency and date formatting
+    cloud/                Report templates, CSV/JSON/TSV output, share-link encoding and encryption, schedules, destinations
 packaging/linux/        Launcher, fallback server and README for the Linux package
 scripts/package-linux.mjs  Builds dist/ledgerly-linux.tar.gz
 ```

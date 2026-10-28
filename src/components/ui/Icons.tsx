@@ -87,3 +87,17 @@ export const SparklesIcon = (p: IconProps) => (
     <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />
   </svg>
 );
+
+export const ShareIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M7 18.5h10.5a4 4 0 00.6-7.95A5.5 5.5 0 007.4 9.1 4.75 4.75 0 007 18.5z" />
+    <path d="M12 16v-5m-2.25 2.25L12 11l2.25 2.25" />
+  </svg>
+);
+
+export const ClockIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+);

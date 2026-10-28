@@ -26,8 +26,16 @@ const config: Config = {
       },
       keyframes: {
         "fade-in": { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        "slide-in": { from: { transform: "translateX(100%)" }, to: { transform: "translateX(0)" } },
+        "slide-up": { from: { opacity: "0", transform: "translateY(12px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        shimmer: { from: { backgroundPosition: "200% 0" }, to: { backgroundPosition: "-200% 0" } },
       },
-      animation: { "fade-in": "fade-in 0.2s ease-out" },
+      animation: {
+        "fade-in": "fade-in 0.2s ease-out",
+        "slide-in": "slide-in 0.28s cubic-bezier(0.32, 0.72, 0, 1)",
+        "slide-up": "slide-up 0.25s ease-out",
+        shimmer: "shimmer 1.6s linear infinite",
+      },
     },
   },
   plugins: [],
