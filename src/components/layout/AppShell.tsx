@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { ExpenseProvider, useExpenses } from "@/components/providers/ExpenseProvider";
 import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
+import { ExportProvider } from "@/components/export/ExportProvider";
 import { Button } from "@/components/ui/Button";
 import { ChartIcon, ListIcon, PlusIcon, WalletIcon } from "@/components/ui/Icons";
 
@@ -141,14 +142,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ToastProvider>
       <ExpenseProvider>
         <ExpenseDialogProvider>
-          <div className="min-h-screen pb-24 sm:pb-12">
-            <Header />
-            <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-              <StorageError />
-              {children}
-            </main>
-          </div>
-          <MobileNav />
+          <ExportProvider>
+            <div className="min-h-screen pb-24 sm:pb-12">
+              <Header />
+              <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+                <StorageError />
+                {children}
+              </main>
+            </div>
+            <MobileNav />
+          </ExportProvider>
         </ExpenseDialogProvider>
       </ExpenseProvider>
     </ToastProvider>

@@ -9,10 +9,14 @@ interface ModalProps {
   title: string;
   description?: string;
   children: ReactNode;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "xl";
+  /** Pinned below the scrolling body, for actions that should always be visible. */
+  footer?: ReactNode;
 }
 
-export function Modal({ open, onClose, title, description, children, size = "md" }: ModalProps) {
+const SIZES = { sm: "sm:max-w-md", md: "sm:max-w-lg", xl: "sm:max-w-6xl" } as const;
+
+export function Modal({ open, onClose, title, description, children, size = "md", footer }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -26,7 +30,11 @@ export function Modal({ open, onClose, title, description, children, size = "md"
 
     // Focus the first form field, or the panel itself.
     const focusTimer = setTimeout(() => {
-      const first = panelRef.current?.querySelector<HTMLElement>("[data-autofocus], input, select, textarea, button");
+      // A marked element wins; otherwise the first control in the body, never the header's close button.
+      const panel = panelRef.current;
+      const first =
+        panel?.querySelector<HTMLElement>("[data-autofocus]") ??
+        panel?.querySelector<HTMLElement>("[data-modal-body] :is(input, select, textarea, button)");
       (first ?? panelRef.current)?.focus();
     }, 0);
 
@@ -75,11 +83,9 @@ export function Modal({ open, onClose, title, description, children, size = "md"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative max-h-[92vh] w-full animate-fade-in overflow-y-auto rounded-t-2xl bg-white shadow-xl outline-none sm:rounded-2xl ${
-          size === "sm" ? "sm:max-w-md" : "sm:max-w-lg"
-        }`}
+        className={`relative flex max-h-[92vh] w-full animate-fade-in flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl outline-none sm:rounded-2xl ${SIZES[size]}`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
           <div>
             <h2 id={titleId} className="text-lg font-semibold text-slate-900">
               {title}
@@ -97,7 +103,10 @@ export function Modal({ open, onClose, title, description, children, size = "md"
             </svg>
           </button>
         </div>
-        <div className="px-5 py-5 sm:px-6">{children}</div>
+        <div data-modal-body className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          {children}
+        </div>
+        {footer && <div className="shrink-0 border-t border-slate-100 bg-slate-50/80 px-5 py-3 sm:px-6">{footer}</div>}
       </div>
     </div>,
     document.body,

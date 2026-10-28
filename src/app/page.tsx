@@ -6,6 +6,7 @@ import { computeStats, sortExpenses, sumAmounts, totalsByCategory, totalsByDay, 
 import { formatMonthKey, monthKey, todayISO } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
+import { useExport } from "@/components/export/ExportProvider";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { CategoryDonut, DailyBarChart, MonthlyBarChart } from "@/components/dashboard/Charts";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
@@ -14,11 +15,12 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CardSkeletonGrid, ListSkeleton, Skeleton } from "@/components/ui/Skeleton";
-import { ChartIcon, PlusIcon } from "@/components/ui/Icons";
+import { ChartIcon, DownloadIcon, PlusIcon } from "@/components/ui/Icons";
 
 export default function DashboardPage() {
   const { expenses, status } = useExpenses();
   const { openAdd } = useExpenseDialogs();
+  const { openExport } = useExport();
 
   const data = useMemo(() => {
     const thisMonth = expenses.filter((e) => monthKey(e.date) === monthKey(todayISO()));
@@ -35,9 +37,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">An overview of where your money is going.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">An overview of where your money is going.</p>
+        </div>
+        <Button variant="secondary" onClick={() => openExport()} disabled={status !== "ready" || expenses.length === 0}>
+          <DownloadIcon className="h-4 w-4" />
+          Export…
+        </Button>
       </div>
 
       {status === "loading" && (

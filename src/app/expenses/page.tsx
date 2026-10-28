@@ -1,13 +1,12 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import { EMPTY_FILTERS, type ExpenseFilters, type SortKey } from "@/lib/types";
+import { CATEGORIES, EMPTY_FILTERS, type ExpenseFilters, type SortKey } from "@/lib/types";
 import { filterExpenses, sortExpenses, sumAmounts } from "@/lib/analytics";
-import { downloadCSV } from "@/lib/csv";
 import { formatCurrency } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
-import { useToast } from "@/components/providers/ToastProvider";
+import { useExport } from "@/components/export/ExportProvider";
 import { ExpenseFiltersBar } from "@/components/expenses/ExpenseFiltersBar";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
 import { SampleDataButton } from "@/components/SampleDataButton";
@@ -22,7 +21,7 @@ const PAGE_SIZE = 50;
 export default function ExpensesPage() {
   const { expenses, status } = useExpenses();
   const { openAdd } = useExpenseDialogs();
-  const { notify } = useToast();
+  const { openExport } = useExport();
   const [filters, setFilters] = useState<ExpenseFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("date-desc");
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -40,16 +39,15 @@ export default function ExpensesPage() {
     setVisible(PAGE_SIZE);
   };
 
-  const handleExport = () => {
-    if (filtered.length === 0) return;
-    try {
-      downloadCSV(filtered);
-      notify(`Exported ${filtered.length} expense${filtered.length === 1 ? "" : "s"} to CSV`);
-    } catch (err) {
-      console.error(err);
-      notify("Export failed. Please try again.", { variant: "error" });
-    }
-  };
+  // Opens the export dialog pre-filled with the filters and sort the user is looking at.
+  const handleExport = () =>
+    openExport({
+      from: filters.from,
+      to: filters.to,
+      categories: filters.category === "All" ? [...CATEGORIES] : [filters.category],
+      keyword: filters.search.trim(),
+      sort,
+    });
 
   return (
     <div className="space-y-6">
@@ -59,9 +57,14 @@ export default function ExpensesPage() {
           <p className="mt-1 text-sm text-slate-500">Search, filter, edit, and export your expenses.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleExport} disabled={status !== "ready" || filtered.length === 0}>
+          <Button
+            variant="secondary"
+            onClick={handleExport}
+            disabled={status !== "ready" || expenses.length === 0}
+            title={isFiltered ? "Export with the current filters" : "Export expenses"}
+          >
             <DownloadIcon className="h-4 w-4" />
-            Export CSV
+            Export…
           </Button>
           <Button onClick={openAdd} disabled={status !== "ready"} className="sm:hidden">
             <PlusIcon className="h-4 w-4" />
