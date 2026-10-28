@@ -1,0 +1,6 @@
+# Keep Unix line endings everywhere; the Linux launcher breaks with CRLF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary
