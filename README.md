@@ -17,7 +17,9 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 
 ## Running it
 
-Requires Node.js 18.17 or newer.
+Requires Node.js 26 or newer. The version is pinned in `.nvmrc`, so with nvm, fnm or a similar version manager you can just run `nvm use` in the project folder. `.npmrc` turns on `engine-strict`, so `npm install` stops with a clear error on an older Node instead of half-working.
+
+The npm that ships with Node 26 may warn that `unrs-resolver` has an install script that isn't approved. That's expected and harmless. The script only downloads a fallback when the native module for your platform is missing, and linting works without it.
 
 ```bash
 npm install
