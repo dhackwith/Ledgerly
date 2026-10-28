@@ -8,7 +8,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Form validation**: required fields, positive amounts up to 2 decimals, no future dates, 120-character descriptions. Errors appear on blur and update as you type. Input like `1,250` or `$12` is accepted and normalized.
 - **Undo** after deleting, from the notification toast.
 - **Expense list** with search, category filter, date range (plus quick presets), sorting, a running total of the filtered results, and "Show more" paging.
-- **CSV export** of whatever the list currently shows (filters and sort applied). Cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
+- **CSV export** with the columns Date, Category, Amount and Description. **Export Data** on the dashboard downloads every expense, newest first. **Export CSV** on the Expenses page downloads whatever the list currently shows, with filters and sort applied. Cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
 - **Responsive**: a top nav on desktop; a bottom tab bar with a floating add button on mobile, where dialogs open as bottom sheets.
@@ -79,7 +79,7 @@ How it works:
 8. **Dashboard.** Hover the bars and the donut to see tooltips. Check that the category list beside the donut matches the chart.
 9. **Search and filters.** On **Expenses**, type `gas` in search, choose a category, click a preset such as **Last month**, or pick custom dates. The count and total update. **Clear filters** resets them.
 10. **Sort.** Switch between newest, oldest, highest and lowest amount.
-11. **Export.** Click **Export CSV**. The downloaded file contains exactly the rows currently shown.
+11. **Export.** On the dashboard, click **Export Data**. The file has every expense with the columns Date, Category, Amount and Description. On **Expenses**, click **Export CSV**. That file contains exactly the rows currently shown. Both buttons are disabled when there is nothing to export.
 12. **Mobile.** Narrow the browser or use device mode in dev tools. Use the bottom bar and the round **+** button.
 13. **Keyboard.** Dialogs open with focus on the first field, trap Tab inside, and close with Escape.
 

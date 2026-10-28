@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { computeStats, sortExpenses, sumAmounts, totalsByCategory, totalsByDay, totalsByMonth } from "@/lib/analytics";
+import { downloadCSV } from "@/lib/csv";
 import { formatMonthKey, monthKey, todayISO } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
@@ -14,7 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CardSkeletonGrid, ListSkeleton, Skeleton } from "@/components/ui/Skeleton";
-import { ChartIcon, PlusIcon } from "@/components/ui/Icons";
+import { ChartIcon, DownloadIcon, PlusIcon } from "@/components/ui/Icons";
 
 export default function DashboardPage() {
   const { expenses, status } = useExpenses();
@@ -33,11 +34,20 @@ export default function DashboardPage() {
     };
   }, [expenses]);
 
+  // Version 1: export every expense, newest first, with no filters applied.
+  const handleExportAll = () => downloadCSV(sortExpenses(expenses, "date-desc"));
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">An overview of where your money is going.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">An overview of where your money is going.</p>
+        </div>
+        <Button variant="secondary" onClick={handleExportAll} disabled={status !== "ready" || expenses.length === 0}>
+          <DownloadIcon className="h-4 w-4" />
+          Export Data
+        </Button>
       </div>
 
       {status === "loading" && (
