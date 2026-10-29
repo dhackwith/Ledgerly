@@ -9,6 +9,7 @@ import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider"
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { CategoryDonut, DailyBarChart, MonthlyBarChart } from "@/components/dashboard/Charts";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
+import { UpcomingRecurringCard } from "@/components/recurring/UpcomingRecurringCard";
 import { SampleDataButton } from "@/components/SampleDataButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -99,6 +100,8 @@ export default function DashboardPage() {
               {data.recent.length ? <ExpenseList expenses={data.recent} compact /> : <ListSkeleton rows={3} />}
             </Card>
           </div>
+
+          <UpcomingRecurringCard />
         </>
       )}
     </div>

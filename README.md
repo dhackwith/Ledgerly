@@ -10,6 +10,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Expense list** with search, category filter, date range (plus quick presets), sorting, a running total of the filtered results, and "Show more" paging.
 - **CSV export** of whatever the list currently shows (filters and sort applied). Cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
+- **Recurring expenses**: schedule expenses that repeat daily, weekly, monthly or yearly (every N units, with an optional end date). Due occurrences are recorded automatically when the app opens, generated expenses are tagged in the list, and rules can be paused, edited or deleted without touching existing expenses. The dashboard shows what is coming up next.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
 - **Responsive**: a top nav on desktop; a bottom tab bar with a floating add button on mobile, where dialogs open as bottom sheets.
 - **Multi-tab sync**: changes in one tab show up in other open tabs.
@@ -85,6 +86,7 @@ To reset all data, run this in the browser console:
 
 ```js
 localStorage.removeItem("expense-tracker:expenses:v1");
+localStorage.removeItem("expense-tracker:recurring:v1");
 ```
 
 ## Project structure
@@ -95,17 +97,21 @@ src/
     layout.tsx            Root layout, font, app shell
     page.tsx              Dashboard
     expenses/page.tsx     Expense list with filters and export
+    recurring/page.tsx    Recurring rules and upcoming occurrences
     not-found.tsx
   components/
     layout/AppShell.tsx   Header, mobile nav, providers, storage error banner
-    providers/            Expense state, toast notifications, add/edit/delete dialogs
+    providers/            Expense state, recurring rules, toast notifications, add/edit/delete dialogs
     expenses/             Form, list, filter bar
+    recurring/            Recurring rule form and lists
     dashboard/            Summary cards and charts
     ui/                   Button, Card, Modal, Skeleton, icons, badges
   lib/
     types.ts              Expense types and categories
     storage.ts            localStorage load/save with validation
     validation.ts         Form validation rules
+    recurring.ts          Recurrence schedule math, materialisation and rule validation
+    recurringStorage.ts   localStorage load/save for recurring rules
     analytics.ts          Filtering, sorting, totals, stats, sample data
     csv.ts                CSV generation and download
     format.ts             Currency and date formatting
