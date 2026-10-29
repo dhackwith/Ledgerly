@@ -105,5 +105,24 @@ export const DocumentIcon = (p: IconProps) => (
   <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
     <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z" />
     <path d="M14 3v5h5M9 13h6M9 17h6" />
+export const AnalyticsIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+);
+
+export const LightbulbIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M9 18h6M10 22h4" />
+    <path d="M12 2a7 7 0 00-4 12.74V17h8v-2.26A7 7 0 0012 2z" />
+  </svg>
+);
+
+export const RepeatIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11V9a4 4 0 014-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v2a4 4 0 01-4 4H3" />
   </svg>
 );

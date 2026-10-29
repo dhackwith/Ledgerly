@@ -18,11 +18,11 @@ import { CATEGORY_META } from "@/lib/categories";
 import { formatCompactCurrency, formatCurrency, formatDate, formatMonthKey, formatPercent, formatShortDate } from "@/lib/format";
 import { CategoryDot } from "@/components/ui/CategoryBadge";
 
-const SERIES = "#2a78d6";
-const GRID = "#e8ecf1";
-const AXIS_TEXT = "#64748b";
+export const SERIES = "#2a78d6";
+export const GRID = "#e8ecf1";
+export const AXIS_TEXT = "#64748b";
 
-function TooltipBox({ title, value, sub }: { title: string; value: string; sub?: string }) {
+export function TooltipBox({ title, value, sub }: { title: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg bg-white px-3 py-2 text-xs shadow-lg ring-1 ring-slate-200">
       <p className="font-medium text-slate-500">{title}</p>

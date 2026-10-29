@@ -10,6 +10,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Expense list** with search, category filter, date range (plus quick presets), sorting, a running total of the filtered results, and "Show more" paging.
 - **Export** to CSV, JSON or PDF from the dashboard or the expense list. Export everything, or only what the list currently shows (filters and sort applied), and optionally include a totals-by-category summary. CSV files carry a UTF-8 byte-order mark for Excel and escape cells that start with `=`, `+`, `-` or `@` so spreadsheets don't run them as formulas. JSON keeps amounts as numbers. PDFs are generated in the browser with no library: a printable report with the summary, a paginated expense table and page numbers.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
+- **Analytics**: a period selector (3, 6 or 12 months), plain-English insights (category rising or falling versus last month, projected month-end spend, priciest day, biggest weekday, no-spend streaks), a stacked monthly chart by category, a daily spending line with a 7-day rolling average, weekday averages, a category month-over-month comparison, and your most frequent expenses.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
 - **Responsive**: a top nav on desktop; a bottom tab bar with a floating add button on mobile, where dialogs open as bottom sheets.
 - **Multi-tab sync**: changes in one tab show up in other open tabs.
@@ -94,6 +95,7 @@ src/
   app/
     layout.tsx            Root layout, font, app shell
     page.tsx              Dashboard
+    analytics/page.tsx    Analytics: insights, trends and comparisons
     expenses/page.tsx     Expense list with filters and export
     not-found.tsx
   components/
@@ -102,6 +104,7 @@ src/
     expenses/             Form, list, filter bar
     export/               Export dialog (format, scope, summary toggle)
     dashboard/            Summary cards and charts
+    analytics/            Insight list, trend charts, comparison table
     ui/                   Button, Card, Modal, Skeleton, icons, badges
   lib/
     types.ts              Expense types and categories
@@ -109,6 +112,7 @@ src/
     validation.ts         Form validation rules
     analytics.ts          Filtering, sorting, totals, stats, sample data
     export/               CSV, JSON and PDF builders, a dependency-free PDF writer, download helper
+    insights.ts           Trend breakdowns and plain-English insights
     format.ts             Currency and date formatting
 packaging/linux/        Launcher, fallback server and README for the Linux package
 scripts/package-linux.mjs  Builds dist/ledgerly-linux.tar.gz
