@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Expense } from "@/lib/types";
+import type { Expense, ExpenseSource } from "@/lib/types";
 import { generateId } from "@/lib/storage";
 import { sumAmounts } from "@/lib/analytics";
 import { DEFAULT_FOLDER, DESTINATIONS, type DestinationId, type IntegrationId } from "@/lib/cloud/destinations";
@@ -68,7 +68,9 @@ export interface ComposerPreset {
   params?: TemplateParams;
 }
 
-export type NewSchedule = Omit<Schedule, "id" | "createdAt" | "nextRunAt" | "lastRunAt" | "lastStatus">;
+export type ImportSource = Extract<ExpenseSource, "import" | "shared-import">;
+
+export type NewSchedule =Omit<Schedule, "id" | "createdAt" | "nextRunAt" | "lastRunAt" | "lastStatus">;
 
 interface CloudContextValue {
   hydrated: boolean;
@@ -95,7 +97,8 @@ interface CloudContextValue {
   restoreSnapshot: (id: string) => void;
   deleteSnapshot: (id: string) => void;
   setAutoSnapshots: (on: boolean) => void;
-  importExpenses: (list: PortableExpense[], mode: "merge" | "replace") => { added: number; skipped: number };
+  /** `source` tags the new expenses: "import" for backup files (default), "shared-import" for someone else's shared report. */
+  importExpenses: (list: PortableExpense[], mode: "merge" | "replace", source?: ImportSource) => { added: number; skipped: number };
 }
 
 const CloudContext = createContext<CloudContextValue | null>(null);
@@ -453,15 +456,15 @@ export function CloudProvider({ children }: { children: ReactNode }) {
   const setAutoSnapshots = useCallback((on: boolean) => commitSnapshots((s) => ({ ...s, auto: on })), [commitSnapshots]);
 
   const importExpenses = useCallback<CloudContextValue["importExpenses"]>(
-    (list, mode) => {
+    (list, mode, source = "import") => {
       takeSnapshot("before-import");
       if (mode === "replace") {
         const now = new Date().toISOString();
-        replaceAll(list.map((e) => ({ ...e, id: generateId(), createdAt: now, updatedAt: now })));
+        replaceAll(list.map((e) => ({ ...e, id: generateId(), createdAt: now, updatedAt: now, meta: { source } })));
         return { added: list.length, skipped: 0 };
       }
       const { fresh, duplicates } = splitNew(list, expensesRef.current);
-      if (fresh.length) addMany(fresh);
+      if (fresh.length) addMany(fresh, { source });
       return { added: fresh.length, skipped: duplicates };
     },
     [addMany, replaceAll, takeSnapshot],

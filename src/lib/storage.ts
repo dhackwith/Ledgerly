@@ -1,4 +1,5 @@
 import { CATEGORIES, type Expense } from "./types";
+import { sanitizeMeta } from "./expenseMeta";
 
 const STORAGE_KEY = "expense-tracker:expenses:v1";
 
@@ -24,11 +25,17 @@ export function loadExpenses(): Expense[] {
   const parsed: unknown = JSON.parse(raw);
   if (!Array.isArray(parsed)) throw new Error("Stored expense data is not a list.");
   // Drop malformed records instead of crashing the whole app.
-  return parsed.filter(isValidExpense).map((e) => ({
-    ...e,
-    createdAt: typeof e.createdAt === "string" ? e.createdAt : new Date().toISOString(),
-    updatedAt: typeof e.updatedAt === "string" ? e.updatedAt : new Date().toISOString(),
-  }));
+  return parsed.filter(isValidExpense).map((record) => {
+    // Malformed meta is dropped but the expense is kept. Legacy records have no meta.
+    const { meta: rawMeta, ...e } = record as Expense & { meta?: unknown };
+    const meta = sanitizeMeta(rawMeta);
+    return {
+      ...e,
+      createdAt: typeof e.createdAt === "string" ? e.createdAt : new Date().toISOString(),
+      updatedAt: typeof e.updatedAt === "string" ? e.updatedAt : new Date().toISOString(),
+      ...(meta ? { meta } : {}),
+    };
+  });
 }
 
 /** Writes expenses to localStorage. Throws on quota or access errors. */
