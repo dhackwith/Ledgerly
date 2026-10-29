@@ -7,9 +7,11 @@ import { formatMonthKey, monthKey, todayISO } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
+import { BudgetAlertBanner, BudgetsCard } from "@/components/dashboard/BudgetsCard";
 import { CategoryDonut, DailyBarChart, MonthlyBarChart } from "@/components/dashboard/Charts";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
 import { ExportDialog } from "@/components/export/ExportDialog";
+import { UpcomingRecurringCard } from "@/components/recurring/UpcomingRecurringCard";
 import { SampleDataButton } from "@/components/SampleDataButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -50,6 +52,8 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      <BudgetAlertBanner />
+
       {status === "loading" && (
         <>
           <CardSkeletonGrid />
@@ -83,6 +87,8 @@ export default function DashboardPage() {
         <>
           <SummaryCards stats={data.stats} />
 
+          <BudgetsCard />
+
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Monthly spending" subtitle="Last 6 months">
               <MonthlyBarChart data={data.monthly} />
@@ -109,6 +115,8 @@ export default function DashboardPage() {
               {data.recent.length ? <ExpenseList expenses={data.recent} compact /> : <ListSkeleton rows={3} />}
             </Card>
           </div>
+
+          <UpcomingRecurringCard />
         </>
       )}
 
