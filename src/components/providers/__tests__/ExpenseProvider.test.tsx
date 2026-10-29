@@ -4,11 +4,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadExpenses } from "@/lib/storage";
 import { FULL_META, SUGGESTION, expense } from "@/lib/__tests__/metaFixtures";
-import { installLocalStorage } from "@/lib/__tests__/localStorage";
 import { ExpenseProvider, useExpenses } from "../ExpenseProvider";
 import { ToastProvider } from "../ToastProvider";
-
-installLocalStorage();
 
 const KEY = "expense-tracker:expenses:v1";
 const input = { date: "2026-10-03", amount: 9.5, category: "Food" as const, description: "Coffee and cake" };

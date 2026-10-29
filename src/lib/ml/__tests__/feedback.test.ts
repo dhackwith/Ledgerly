@@ -3,10 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ML_FEEDBACK_KEY, type FeedbackEvent } from "../contract";
 import { MAX_FEEDBACK_EVENTS, clearFeedback, readFeedback, recordFeedback, sanitizeFeedbackEvent, subscribeFeedback, summarizeFeedback } from "../feedback";
 
-// Node 26 has its own localStorage (unusable without --localstorage-file) that shadows jsdom's. Use jsdom's.
-const jsdomWindow = (globalThis as unknown as { jsdom: { window: Window } }).jsdom.window;
-Object.defineProperty(globalThis, "localStorage", { value: jsdomWindow.localStorage, configurable: true, writable: true });
-const storageProto = Object.getPrototypeOf(jsdomWindow.localStorage) as Storage;
+const storageProto = Object.getPrototypeOf(window.localStorage) as Storage;
 
 function event(overrides: Partial<FeedbackEvent> = {}): FeedbackEvent {
   return {

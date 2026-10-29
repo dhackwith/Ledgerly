@@ -56,6 +56,7 @@ export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
     date: values.date,
     mode: isEdit ? "edit" : "create",
     currentCategory: initial?.category,
+    excludeId: initial?.id,
   });
 
   const suggestion = suggestionsFailed ? null : engineResult;

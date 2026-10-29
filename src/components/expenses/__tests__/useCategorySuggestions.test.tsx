@@ -220,6 +220,19 @@ describe("useCategorySuggestions", () => {
     expect(result.current.result?.ranked).toEqual([]);
   });
 
+  it("trains on every expense when nothing is excluded", () => {
+    h.expenses = [expense({ id: "a" }), expense({ id: "b" })];
+    setup({ description: "uber" });
+    expect(h.createSuggester).toHaveBeenCalledWith(h.expenses, expect.anything());
+  });
+
+  it("leaves the excluded expense out of training", () => {
+    h.expenses = [expense({ id: "a" }), expense({ id: "b" })];
+    setup({ description: "uber", mode: "edit", currentCategory: "Food", excludeId: "a" });
+    const training = h.createSuggester.mock.calls.at(-1)![0] as Expense[];
+    expect(training.map((e) => e.id)).toEqual(["b"]);
+  });
+
   it("renders as disabled on the server, so hydration matches", () => {
     function Probe() {
       const { result, enabled } = useCategorySuggestions({ ...base, description: "uber" });

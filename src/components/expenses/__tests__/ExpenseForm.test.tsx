@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   createSuggester: vi.fn(),
   recordFeedback: vi.fn(),
   settings: { enabled: true, resetAt: null } as MlSettings,
+  expenses: [] as Expense[],
 }));
 
 vi.mock("@/lib/ml", () => ({
@@ -30,7 +31,7 @@ vi.mock("@/lib/ml/feedback", () => ({
   recordFeedback: (...args: unknown[]) => h.recordFeedback(...args),
 }));
 vi.mock("@/components/providers/ExpenseProvider", () => ({
-  useExpenses: () => ({ expenses: [] }),
+  useExpenses: () => ({ expenses: h.expenses }),
 }));
 
 const NONE = suggestion("none", []);
@@ -63,6 +64,7 @@ beforeEach(() => {
   h.suggest.mockReset().mockImplementation((q: SuggestionQuery) => h.respond(q));
   h.createSuggester.mockReset().mockImplementation(() => ({ suggest: h.suggest }));
   h.recordFeedback.mockReset();
+  h.expenses = [];
 });
 
 afterEach(() => {
@@ -240,6 +242,17 @@ describe("ExpenseForm in edit mode", () => {
     expect(h.suggest).toHaveBeenCalledWith(expect.objectContaining({ mode: "edit", currentCategory: "Food" }));
     expect(checkedCategory()).toBe("Food");
     expect(screen.queryByText("Suggested")).toBeNull();
+  });
+
+  it("leaves the expense being edited out of the training data", async () => {
+    const editing = expense({ id: "editing", category: "Food", description: "uber" });
+    const other = expense({ id: "other", category: "Transportation", description: "uber" });
+    h.expenses = [editing, other];
+    renderForm(editing);
+    await waitFor(() => expect(h.createSuggester).toHaveBeenCalled());
+
+    const training = h.createSuggester.mock.calls.at(-1)![0] as Expense[];
+    expect(training.map((e) => e.id)).toEqual(["other"]);
   });
 
   it("shows chips when the engine returns them, and a chip selects", async () => {

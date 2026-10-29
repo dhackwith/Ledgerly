@@ -4,12 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Expense, ExpenseInput, SuggestionRecord } from "@/lib/types";
 import { FULL_META, SUGGESTION, expense } from "@/lib/__tests__/metaFixtures";
-import { installLocalStorage } from "@/lib/__tests__/localStorage";
 import { ExpenseProvider, useExpenses } from "../ExpenseProvider";
 import { ExpenseDialogProvider, useExpenseDialogs } from "../ExpenseDialogProvider";
 import { ToastProvider } from "../ToastProvider";
-
-installLocalStorage();
 
 // The real form belongs to another feature; this stand-in submits with or without a suggestion.
 vi.mock("@/components/expenses/ExpenseForm", () => ({

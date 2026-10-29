@@ -6,14 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Expense } from "@/lib/types";
 import type { Report } from "@/lib/cloud/report";
 import { FULL_META, expense } from "@/lib/__tests__/metaFixtures";
-import { installLocalStorage } from "@/lib/__tests__/localStorage";
 import { ExpenseProvider, useExpenses } from "@/components/providers/ExpenseProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { CloudProvider, useCloud } from "../CloudProvider";
 import { Backups } from "../hub/Backups";
 import SharedReportPage from "@/app/r/page";
-
-installLocalStorage();
 
 // Shared reports are decoded from the URL; this skips the compression and crypto, which have their own tests.
 const decodeShare = vi.hoisted(() => vi.fn());

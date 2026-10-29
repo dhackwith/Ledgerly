@@ -10,5 +10,6 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     // Component tests opt in with a `// @vitest-environment jsdom` comment at the top of the file.
     environment: "node",
+    setupFiles: ["./vitest.setup.ts"],
   },
 });

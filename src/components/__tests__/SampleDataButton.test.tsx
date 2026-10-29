@@ -3,12 +3,9 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Expense } from "@/lib/types";
-import { installLocalStorage } from "@/lib/__tests__/localStorage";
 import { ExpenseProvider, useExpenses } from "@/components/providers/ExpenseProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { SampleDataButton } from "../SampleDataButton";
-
-installLocalStorage();
 
 let expenses: Expense[] = [];
 function Probe() {

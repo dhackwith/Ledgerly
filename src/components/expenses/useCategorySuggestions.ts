@@ -21,6 +21,8 @@ export interface CategorySuggestionInput {
   mode: "create" | "edit";
   /** In edit mode, the expense's saved category. */
   currentCategory?: Category;
+  /** In edit mode, the expense being edited. It's left out of training so its saved category doesn't vote for itself. */
+  excludeId?: string;
 }
 
 export interface CategorySuggestionState {
@@ -54,6 +56,7 @@ export function useCategorySuggestions({
   date,
   mode,
   currentCategory,
+  excludeId,
 }: CategorySuggestionInput): CategorySuggestionState {
   const { expenses } = useExpenses();
   // The server snapshot is the defaults (off), so server and hydration renders match.
@@ -70,12 +73,13 @@ export function useCategorySuggestions({
   // Rebuilt whenever the expenses change, so undo, delete, imports and other tabs are picked up.
   const built = useMemo<{ suggester: Suggester } | { error: unknown } | null>(() => {
     if (!settings.enabled) return null;
+    const training = excludeId ? expenses.filter((e) => e.id !== excludeId) : expenses;
     try {
-      return { suggester: createSuggester(expenses, { ignoreSuggestionMetaBefore: settings.resetAt }) };
+      return { suggester: createSuggester(training, { ignoreSuggestionMetaBefore: settings.resetAt }) };
     } catch (error) {
       return { error };
     }
-  }, [expenses, settings.enabled, settings.resetAt]);
+  }, [expenses, excludeId, settings.enabled, settings.resetAt]);
 
   const text = description.trim();
   const fieldErrors = validateExpense({ date, amount, category: "", description: "" }).errors;

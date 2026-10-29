@@ -8,10 +8,6 @@ import { clearMlStorage, getMlSettings, setMlSettings } from "@/lib/ml/settings"
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { SmartSuggestionsCard } from "../SmartSuggestionsCard";
 
-// Node 26 has its own localStorage (unusable without --localstorage-file) that shadows jsdom's. Use jsdom's.
-const jsdomWindow = (globalThis as unknown as { jsdom: { window: Window } }).jsdom.window;
-Object.defineProperty(globalThis, "localStorage", { value: jsdomWindow.localStorage, configurable: true, writable: true });
-
 function event(overrides: Partial<FeedbackEvent> = {}): FeedbackEvent {
   return { t: "2026-10-28T10:00:00.000Z", predicted: "Food", confidence: 0.9, final: "Food", shown: "preselected", modelVersion: "1", ...overrides };
 }

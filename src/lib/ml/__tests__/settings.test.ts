@@ -2,10 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ML_FEEDBACK_KEY, ML_SETTINGS_KEY } from "../contract";
 
-// Node 26 has its own localStorage (unusable without --localstorage-file) that shadows jsdom's. Use jsdom's.
-const jsdomWindow = (globalThis as unknown as { jsdom: { window: Window & typeof globalThis } }).jsdom.window;
-Object.defineProperty(globalThis, "localStorage", { value: jsdomWindow.localStorage, configurable: true, writable: true });
-const storageProto = Object.getPrototypeOf(jsdomWindow.localStorage) as Storage;
+const storageProto = Object.getPrototypeOf(window.localStorage) as Storage;
 
 type SettingsModule = typeof import("../settings");
 
@@ -16,7 +13,7 @@ async function load(): Promise<SettingsModule> {
 }
 
 function storageEvent(key: string | null, newValue: string | null) {
-  window.dispatchEvent(new jsdomWindow.StorageEvent("storage", { key, newValue }));
+  window.dispatchEvent(new StorageEvent("storage", { key, newValue }));
 }
 
 beforeEach(() => {

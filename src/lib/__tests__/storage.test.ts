@@ -2,9 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadExpenses, saveExpenses } from "../storage";
 import { FULL_META, SUGGESTION, expense } from "./metaFixtures";
-import { installLocalStorage } from "./localStorage";
-
-installLocalStorage();
 
 const KEY = "expense-tracker:expenses:v1";
 const store = (list: unknown[]) => window.localStorage.setItem(KEY, JSON.stringify(list));
