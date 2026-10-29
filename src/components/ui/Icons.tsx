@@ -105,6 +105,9 @@ export const DocumentIcon = (p: IconProps) => (
   <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
     <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z" />
     <path d="M14 3v5h5M9 13h6M9 17h6" />
+  </svg>
+);
+
 export const AnalyticsIcon = (p: IconProps) => (
   <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
     <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
