@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CATEGORIES, type Expense, type ExpenseInput } from "@/lib/types";
+import { CATEGORIES, type Expense, type ExpenseInput, type SuggestionRecord } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/categories";
 import { todayISO } from "@/lib/format";
 import { MAX_DESCRIPTION, validateExpense, type ExpenseFormErrors, type ExpenseFormValues } from "@/lib/validation";
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/Button";
 
 interface ExpenseFormProps {
   initial?: Expense;
-  onSubmit: (data: ExpenseInput) => void | Promise<void>;
+  /** `suggestion` is the category suggestion that was showing at submit time, if any. */
+  onSubmit: (data: ExpenseInput, suggestion?: SuggestionRecord) => void | Promise<void>;
   onCancel: () => void;
 }
 

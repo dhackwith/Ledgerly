@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Expense, ExpenseInput } from "@/lib/types";
+import type { Expense, ExpenseInput, ExpenseMeta } from "@/lib/types";
 import { generateId, loadExpenses, saveExpenses } from "@/lib/storage";
 import { useToast } from "./ToastProvider";
 
@@ -11,11 +11,13 @@ interface ExpenseContextValue {
   expenses: Expense[];
   status: Status;
   loadError: string | null;
-  addExpense: (input: ExpenseInput) => Expense;
-  updateExpense: (id: string, input: ExpenseInput) => void;
+  addExpense: (input: ExpenseInput, meta?: ExpenseMeta) => Expense;
+  /** `meta` merges into the expense's existing meta. */
+  updateExpense: (id: string, input: ExpenseInput, meta?: Partial<ExpenseMeta>) => void;
   deleteExpense: (id: string) => Expense | undefined;
   restoreExpenses: (items: Expense[]) => void;
-  addMany: (inputs: ExpenseInput[]) => void;
+  /** `meta` is applied to every added expense. */
+  addMany: (inputs: ExpenseInput[], meta?: ExpenseMeta) => void;
   replaceAll: (items: Expense[]) => void;
   retryLoad: () => void;
 }
