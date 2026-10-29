@@ -65,8 +65,8 @@ export function TopCategoriesTable({ rows, total, count }: Props) {
               <th scope="row" className="px-3 py-3 text-left font-normal">
                 <CategoryBadge category={row.category} />
                 {/* Phones have no room for the Share and Expenses columns, so both go under the badge. */}
-                <span className="mt-1.5 flex items-center gap-2 text-xs text-slate-500 sm:hidden">
-                  <ShareBar row={row} className="h-1.5 w-16 shrink-0" />
+                <span className="mt-1.5 flex items-center gap-2 whitespace-nowrap text-xs text-slate-500 sm:hidden">
+                  <ShareBar row={row} className="h-1.5 w-12 shrink-0" />
                   <span className="tabular-nums">{formatShare(row.share)}</span>
                   <span>· {expensesLabel(row.count)}</span>
                 </span>
