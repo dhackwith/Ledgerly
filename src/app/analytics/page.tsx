@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   categoryMonthOverMonth,
@@ -24,7 +25,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { AnalyticsIcon, PlusIcon } from "@/components/ui/Icons";
+import { AnalyticsIcon, LightbulbIcon, PlusIcon } from "@/components/ui/Icons";
 
 const ROLLING_WINDOW = 7;
 
@@ -60,7 +61,17 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Analytics</h1>
           <p className="text-sm text-slate-500">Trends, comparisons and patterns in your spending.</p>
         </div>
-        <PeriodSelector value={months} onChange={setMonths} />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Insights is in the desktop nav; the mobile tab bar has no room, so link it from here. */}
+          <Link
+            href="/insights"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-brand-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 sm:hidden"
+          >
+            <LightbulbIcon className="h-4 w-4" />
+            Monthly insights
+          </Link>
+          <PeriodSelector value={months} onChange={setMonths} />
+        </div>
       </div>
 
       {status === "loading" && (

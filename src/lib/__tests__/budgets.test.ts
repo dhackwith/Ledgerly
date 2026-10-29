@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   budgetProgress,
+  budgetStreak,
   budgetState,
   budgetSummary,
   countLimits,
@@ -171,5 +172,65 @@ describe("parseBudgets", () => {
     expect(() => parseBudgets([])).toThrow();
     expect(() => parseBudgets(null)).toThrow();
     expect(() => parseBudgets("nope")).toThrow();
+  });
+});
+
+describe("budgetStreak", () => {
+  it("returns null when no usable limits are set", () => {
+    const expenses = [expense({ date: "2026-10-20", amount: 10, category: "Food" })];
+    expect(budgetStreak(expenses, {}, now)).toBeNull();
+    expect(budgetStreak(expenses, { Food: 0 }, now)).toBeNull();
+  });
+
+  it("counts every day since the first expense while nothing is over", () => {
+    const expenses = [expense({ date: "2026-10-20", amount: 10, category: "Food" })];
+    // Oct 20 through Oct 28, counting today.
+    expect(budgetStreak(expenses, { Food: 100 }, now)).toEqual({ current: 9, longest: 9, overToday: [] });
+  });
+
+  it("breaks when a category goes over and stays broken for the rest of the month", () => {
+    const expenses = [
+      expense({ date: "2026-09-25", amount: 20, category: "Food" }),
+      expense({ date: "2026-10-10", amount: 30, category: "Food" }),
+      expense({ date: "2026-10-15", amount: 30, category: "Food" }),
+    ];
+    // Sep 25–30 (6 days) plus Oct 1–14 (14 days) before October's $60 passes the $50 limit.
+    expect(budgetStreak(expenses, { Food: 50 }, now)).toEqual({ current: 0, longest: 20, overToday: ["Food"] });
+  });
+
+  it("restarts on the first of the month and treats spending exactly the limit as on budget", () => {
+    const expenses = [
+      expense({ date: "2026-09-10", amount: 60, category: "Food" }),
+      expense({ date: "2026-10-02", amount: 50, category: "Food" }),
+    ];
+    expect(budgetStreak(expenses, { Food: 50 }, now)).toEqual({ current: 28, longest: 28, overToday: [] });
+  });
+
+  it("ignores categories without a limit and future-dated expenses", () => {
+    const expenses = [
+      expense({ date: "2026-10-01", amount: 5, category: "Food" }),
+      expense({ date: "2026-10-03", amount: 1000, category: "Shopping" }),
+      expense({ date: "2026-10-30", amount: 500, category: "Food" }),
+    ];
+    expect(budgetStreak(expenses, { Food: 50 }, now)).toEqual({ current: 28, longest: 28, overToday: [] });
+  });
+
+  it("caps the count at the lookback window", () => {
+    const expenses = [expense({ date: "2025-01-01", amount: 1, category: "Food" })];
+    expect(budgetStreak(expenses, { Food: 50 }, now, 30)).toEqual({ current: 30, longest: 30, overToday: [] });
+  });
+
+  it("includes spending earlier in the month than the window when checking limits", () => {
+    // The 10-day window starts Oct 19, but Oct 5 already put Food over for the whole month.
+    const expenses = [expense({ date: "2026-10-05", amount: 60, category: "Food" })];
+    expect(budgetStreak(expenses, { Food: 50 }, now, 10)).toEqual({ current: 0, longest: 0, overToday: ["Food"] });
+  });
+
+  it("lists every category over today in category order", () => {
+    const expenses = [
+      expense({ date: "2026-10-01", amount: 20, category: "Bills" }),
+      expense({ date: "2026-10-02", amount: 20, category: "Food" }),
+    ];
+    expect(budgetStreak(expenses, { Bills: 10, Food: 10 }, now)?.overToday).toEqual(["Food", "Bills"]);
   });
 });

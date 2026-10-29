@@ -11,6 +11,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Export** to CSV, JSON or PDF from the dashboard or the expense list. Export everything, or only what the list currently shows (filters and sort applied), and optionally include a totals-by-category summary. CSV files carry a UTF-8 byte-order mark for Excel and escape cells that start with `=`, `+`, `-` or `@` so spreadsheets don't run them as formulas. JSON keeps amounts as numbers. PDFs are generated in the browser with no library: a printable report with the summary, a paginated expense table and page numbers.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
 - **Analytics**: a period selector (3, 6 or 12 months), plain-English insights (category rising or falling versus last month, projected month-end spend, priciest day, biggest weekday, no-spend streaks), a stacked monthly chart by category, a daily spending line with a 7-day rolling average, weekday averages, a category month-over-month comparison, and your most frequent expenses.
+- **Monthly Insights** (`/insights`, in the top nav, or **Monthly insights** on the Analytics page on mobile): this month's spending donut, your top 3 categories with amounts, and a **budget streak**, the number of days in a row on which no budgeted category was over its monthly limit. The streak carries across months, starts at your first expense, looks back at most a year, and applies your current limits to past days. With no budgets set, it links to the Budgets page.
 - **Budgets**: a monthly limit per category, edited inline on the Budgets page. Progress bars show spend against each limit (with an "80% used" / "Over by $X" / "On track" label, never colour alone), a projected month-end hint when you're close, a compact card and an over-budget banner on the dashboard, and a toast the moment a category crosses 80% or goes over.
 - **Recurring expenses**: schedule expenses that repeat daily, weekly, monthly or yearly (every N units, with an optional end date). Due occurrences are recorded automatically when the app opens, generated expenses are tagged in the list, and rules can be paused, edited or deleted without touching existing expenses. The dashboard shows what is coming up next.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
@@ -101,6 +102,7 @@ src/
     layout.tsx            Root layout, font, app shell
     page.tsx              Dashboard
     analytics/page.tsx    Analytics: insights, trends and comparisons
+    insights/page.tsx     Monthly Insights: this month's breakdown and budget streak
     expenses/page.tsx     Expense list with filters and export
     budgets/page.tsx      Monthly limits per category with progress
     recurring/page.tsx    Recurring rules and upcoming occurrences
@@ -114,18 +116,19 @@ src/
     recurring/            Recurring rule form and lists
     dashboard/            Summary cards, budgets card and charts
     analytics/            Insight list, trend charts, comparison table
+    insights/             MonthlyInsights screen (donut, top 3, budget streak)
     ui/                   Button, Card, Modal, Skeleton, icons, badges
   lib/
     types.ts              Expense types and categories
     storage.ts            localStorage load/save with validation
-    budgets.ts            Budget progress, summary and month-end projection
+    budgets.ts            Budget progress, summary, month-end projection and budget streak
     budgetStorage.ts      localStorage load/save for budget limits
     validation.ts         Form validation rules
     recurring.ts          Recurrence schedule math, materialisation and rule validation
     recurringStorage.ts   localStorage load/save for recurring rules
     analytics.ts          Filtering, sorting, totals, stats, sample data
     export/               CSV, JSON and PDF builders, a dependency-free PDF writer, download helper
-    insights.ts           Trend breakdowns and plain-English insights
+    insights.ts           Trend breakdowns, plain-English insights and the monthly snapshot
     format.ts             Currency and date formatting
 packaging/linux/        Launcher, fallback server and README for the Linux package
 scripts/package-linux.mjs  Builds dist/ledgerly-linux.tar.gz

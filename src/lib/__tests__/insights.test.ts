@@ -3,6 +3,7 @@ import {
   categoryMonthOverMonth,
   generateInsights,
   monthlyByCategory,
+  monthSnapshot,
   noSpendStreaks,
   rollingDailyAverage,
   topDescriptions,
@@ -177,5 +178,37 @@ describe("generateInsights", () => {
       title: "Food makes up 100% of your spending",
       detail: "$12.00 across 1 expense overall.",
     });
+  });
+});
+
+describe("monthSnapshot", () => {
+  const items = [
+    expense({ date: "2026-10-02", amount: 12.1, category: "Food" }),
+    expense({ date: "2026-10-03", amount: 0.2, category: "Food" }),
+    expense({ date: "2026-10-04", amount: 40, category: "Shopping" }),
+    expense({ date: "2026-10-05", amount: 25, category: "Bills" }),
+    expense({ date: "2026-10-06", amount: 5, category: "Other" }),
+    expense({ date: "2026-09-30", amount: 900, category: "Entertainment" }),
+  ];
+
+  it("totals this month by category, largest first, and keeps the top three", () => {
+    const snapshot = monthSnapshot(items, now);
+    expect(snapshot.month).toBe("2026-10");
+    expect(snapshot.total).toBe(82.3);
+    expect(snapshot.categories.map((c) => c.category)).toEqual(["Shopping", "Bills", "Food", "Other"]);
+    expect(snapshot.top.map((c) => [c.category, c.total])).toEqual([
+      ["Shopping", 40],
+      ["Bills", 25],
+      ["Food", 12.3],
+    ]);
+    expect(snapshot.top[0].share).toBeCloseTo(40 / 82.3);
+  });
+
+  it("is empty for a month with no spending", () => {
+    expect(monthSnapshot(items, new Date(2026, 10, 3))).toEqual({ month: "2026-11", total: 0, categories: [], top: [] });
+  });
+
+  it("respects topN", () => {
+    expect(monthSnapshot(items, now, 1).top.map((c) => c.category)).toEqual(["Shopping"]);
   });
 });

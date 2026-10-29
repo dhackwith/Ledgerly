@@ -1,5 +1,5 @@
 import { CATEGORIES, type Category, type Expense } from "./types";
-import { sumAmounts, totalsByCategory, totalsByDay } from "./analytics";
+import { sumAmounts, totalsByCategory, totalsByDay, type CategoryTotal } from "./analytics";
 import { formatCurrency, formatDate, formatPercent, monthKey, toISODate } from "./format";
 
 /** Whole cents for one expense, so sums never drift (same approach as `sumAmounts`). */
@@ -377,4 +377,26 @@ export function generateInsights(expenses: Expense[], now = new Date()): Insight
   }
 
   return out.slice(0, MAX_INSIGHTS);
+}
+
+// ---------------------------------------------------------------------------
+// Monthly snapshot (Monthly insights card)
+// ---------------------------------------------------------------------------
+
+export interface MonthSnapshot {
+  /** YYYY-MM. */
+  month: string;
+  total: number;
+  /** Every category with spending this month, largest first. */
+  categories: CategoryTotal[];
+  /** The largest `topN` of `categories`. */
+  top: CategoryTotal[];
+}
+
+/** Spending by category for the calendar month containing `now`. */
+export function monthSnapshot(expenses: Expense[], now = new Date(), topN = 3): MonthSnapshot {
+  const month = toISODate(now).slice(0, 7);
+  const items = expenses.filter((e) => monthKey(e.date) === month);
+  const categories = totalsByCategory(items);
+  return { month, total: sumAmounts(items), categories, top: categories.slice(0, Math.max(0, topN)) };
 }
