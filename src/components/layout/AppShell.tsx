@@ -9,7 +9,7 @@ import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers
 import { BudgetProvider } from "@/components/providers/BudgetProvider";
 import { RecurringProvider } from "@/components/providers/RecurringProvider";
 import { Button } from "@/components/ui/Button";
-import { AnalyticsIcon, ChartIcon, ListIcon, PlusIcon, RepeatIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
+import { AnalyticsIcon, ChartIcon, ListIcon, PlusIcon, RepeatIcon, TagIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: ChartIcon },
@@ -17,6 +17,7 @@ const NAV = [
   { href: "/expenses", label: "Expenses", icon: ListIcon },
   { href: "/budgets", label: "Budgets", icon: TargetIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
+  { href: "/categories", label: "Categories", icon: TagIcon },
 ];
 
 function Header() {
@@ -73,7 +74,8 @@ function MobileNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
       aria-label="Main"
     >
-      <div className="grid h-16 grid-cols-6 items-center">
+      {/* One column per nav item plus the centre Add button. */}
+      <div className="grid h-16 items-center" style={{ gridTemplateColumns: `repeat(${NAV.length + 1}, minmax(0, 1fr))` }}>
         {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <MobileLink
             key={href}
@@ -107,10 +109,10 @@ function MobileLink({ href, label, active, icon }: { href: string; label: string
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex flex-col items-center gap-1 text-xs font-medium ${active ? "text-brand-600" : "text-slate-500"}`}
+      className={`flex min-w-0 flex-col items-center gap-1 text-[10px] font-medium ${active ? "text-brand-600" : "text-slate-500"}`}
     >
       {icon}
-      {label}
+      <span className="max-w-full truncate px-0.5">{label}</span>
     </Link>
   );
 }
