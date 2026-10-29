@@ -125,3 +125,79 @@ export function nearLimitCategories(progress: BudgetProgress[]): Category[] {
 export function countLimits(limits: BudgetLimits): number {
   return CATEGORIES.filter((c) => limits[c] !== undefined).length;
 }
+
+export interface BudgetStreak {
+  /** Consecutive days, ending today, on which no budgeted category was over its monthly limit. */
+  current: number;
+  /** Longest such run within the lookback window. */
+  longest: number;
+  /** Categories over their monthly limit as of today, in category order. Empty while the streak is alive. */
+  overToday: Category[];
+}
+
+/** How many days back a streak is counted. */
+export const STREAK_LOOKBACK_DAYS = 365;
+
+/**
+ * Days without overspending. A day is on budget when, at the end of that day, no category with a
+ * limit has spent more than that limit so far in its calendar month, so the streak can carry across
+ * months. Today's limits are applied to past days. Days before the first expense are not counted,
+ * since nothing was being tracked yet. Returns `null` when no limits are set.
+ */
+export function budgetStreak(
+  expenses: Expense[],
+  limits: BudgetLimits,
+  now: Date,
+  lookbackDays = STREAK_LOOKBACK_DAYS,
+): BudgetStreak | null {
+  const limitCents = new Map<Category, number>();
+  for (const category of CATEGORIES) {
+    const limit = limits[category];
+    if (limit === undefined) continue;
+    const cents = toCents(limit);
+    if (Number.isFinite(cents) && cents > 0) limitCents.set(category, cents);
+  }
+  if (limitCents.size === 0) return null;
+
+  const todayISO = toISODate(now);
+  const windowStart = toISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (Math.max(1, lookbackDays) - 1)));
+  let firstExpense = todayISO;
+  for (const e of expenses) {
+    if (e.date <= todayISO && e.date < firstExpense) firstExpense = e.date;
+  }
+  const start = firstExpense > windowStart ? firstExpense : windowStart;
+  // Month-to-date totals need the days of start's month that fall before start.
+  const monthStart = `${monthKey(start)}-01`;
+
+  const byDay = new Map<string, Map<Category, number>>();
+  for (const e of expenses) {
+    if (e.date < monthStart || e.date > todayISO || !limitCents.has(e.category)) continue;
+    const day = byDay.get(e.date) ?? new Map<Category, number>();
+    day.set(e.category, (day.get(e.category) ?? 0) + toCents(e.amount));
+    byDay.set(e.date, day);
+  }
+
+  const monthToDate = new Map<Category, number>();
+  let month = "";
+  let run = 0;
+  let longest = 0;
+  let overToday: Category[] = [];
+  const [y, m] = monthStart.split("-").map(Number);
+  for (let d = new Date(y, m - 1, 1); toISODate(d) <= todayISO; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+    const iso = toISODate(d);
+    if (monthKey(iso) !== month) {
+      month = monthKey(iso);
+      monthToDate.clear();
+    }
+    byDay.get(iso)?.forEach((cents, category) => {
+      monthToDate.set(category, (monthToDate.get(category) ?? 0) + cents);
+    });
+    if (iso < start) continue;
+    overToday = Array.from(limitCents)
+      .filter(([category, limit]) => (monthToDate.get(category) ?? 0) > limit)
+      .map(([category]) => category);
+    run = overToday.length ? 0 : run + 1;
+    longest = Math.max(longest, run);
+  }
+  return { current: run, longest, overToday };
+}

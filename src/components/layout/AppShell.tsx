@@ -9,11 +9,12 @@ import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers
 import { BudgetProvider } from "@/components/providers/BudgetProvider";
 import { RecurringProvider } from "@/components/providers/RecurringProvider";
 import { Button } from "@/components/ui/Button";
-import { AnalyticsIcon, ChartIcon, ListIcon, PlusIcon, RepeatIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
+import { AnalyticsIcon, ChartIcon, LightbulbIcon, ListIcon, PlusIcon, RepeatIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: ChartIcon },
   { href: "/analytics", label: "Analytics", icon: AnalyticsIcon },
+  { href: "/insights", label: "Insights", icon: LightbulbIcon },
   { href: "/expenses", label: "Expenses", icon: ListIcon },
   { href: "/budgets", label: "Budgets", icon: TargetIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
@@ -26,12 +27,13 @@ function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:gap-6">
         <Link href="/" className="flex items-center gap-2.5 font-semibold text-slate-900">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
             <WalletIcon className="h-[18px] w-[18px]" />
           </span>
-          <span className="text-[15px]">Ledgerly</span>
+          {/* Between sm and lg the six nav links leave no room, so the name and the button label collapse. */}
+          <span className="text-[15px] sm:max-md:sr-only">Ledgerly</span>
         </Link>
 
         <nav className="hidden items-center gap-1 sm:flex" aria-label="Main">
@@ -42,7 +44,7 @@ function Header() {
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3 ${
                   active ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
@@ -55,13 +57,16 @@ function Header() {
         <div className="ml-auto hidden sm:block">
           <Button onClick={openAdd} disabled={status !== "ready"}>
             <PlusIcon className="h-4 w-4" />
-            Add expense
+            <span className="sm:max-lg:sr-only">Add expense</span>
           </Button>
         </div>
       </div>
     </header>
   );
 }
+
+// The tab bar has room for five links around the add button; Insights is reached from Analytics instead.
+const MOBILE_NAV = NAV.filter(({ href }) => href !== "/insights");
 
 function MobileNav() {
   const pathname = usePathname();
@@ -74,12 +79,12 @@ function MobileNav() {
       aria-label="Main"
     >
       <div className="grid h-16 grid-cols-6 items-center">
-        {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
+        {MOBILE_NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <MobileLink
             key={href}
             href={href}
             label={label}
-            active={href === "/" ? pathname === "/" : pathname.startsWith(href)}
+            active={href === "/" ? pathname === "/" : pathname.startsWith(href) || (href === "/analytics" && pathname.startsWith("/insights"))}
             icon={<Icon className="h-5 w-5" />}
           />
         ))}
@@ -94,7 +99,7 @@ function MobileNav() {
             <PlusIcon className="h-6 w-6" />
           </button>
         </div>
-        {NAV.slice(2).map(({ href, label, icon: Icon }) => (
+        {MOBILE_NAV.slice(2).map(({ href, label, icon: Icon }) => (
           <MobileLink key={href} href={href} label={label} active={pathname.startsWith(href)} icon={<Icon className="h-5 w-5" />} />
         ))}
       </div>
