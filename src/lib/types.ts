@@ -19,6 +19,32 @@ export interface Expense {
   description: string;
   createdAt: string;
   updatedAt: string;
+  /** Provenance and suggestion details used by smart category suggestions. Never exported or shared. */
+  meta?: ExpenseMeta;
+}
+
+/** Where an expense came from. Sample data is never used for learning. */
+export type ExpenseSource = "manual" | "import" | "shared-import" | "sample";
+
+/** How a category suggestion was shown in the form. */
+export type SuggestionDisplay = "preselected" | "chips" | "none";
+
+/** The suggestion that was on screen when an expense was saved. */
+export interface SuggestionRecord {
+  category: Category;
+  /** Calibrated confidence, 0..1. */
+  confidence: number;
+  shown: SuggestionDisplay;
+  /** True when the saved category equals the suggested one. */
+  accepted: boolean;
+  modelVersion: string;
+}
+
+export interface ExpenseMeta {
+  source: ExpenseSource;
+  suggestion?: SuggestionRecord;
+  /** Set when an edit changed the category. */
+  recategorizedAt?: string;
 }
 
 export type ExpenseInput = Pick<Expense, "date" | "amount" | "category" | "description">;

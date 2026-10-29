@@ -14,7 +14,8 @@ export function SampleDataButton() {
       variant="secondary"
       onClick={() => {
         const items = buildSampleExpenses();
-        addMany(items);
+        // Sample data is fake, so it's tagged to keep it out of learning.
+        addMany(items, { source: "sample" });
         notify(`Loaded ${items.length} sample expenses`);
       }}
     >

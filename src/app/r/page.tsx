@@ -250,7 +250,8 @@ export default function SharedReportPage() {
                 data-autofocus
                 disabled={fresh.length === 0}
                 onClick={() => {
-                  const { added } = importExpenses(portable, "merge");
+                  // Someone else's spending habits, so learning down-weights it.
+                  const { added } = importExpenses(portable, "merge", "shared-import");
                   notify(`Imported ${plural(added, "expense")}`);
                   setImporting(false);
                 }}

@@ -32,6 +32,16 @@ A cloud-style hub at **Share & sync** (also **Share report** on the dashboard) f
 
 **What's real and what's simulated.** Email delivery and the five connected apps are simulated: you see the complete flow and a realistic background job, but nothing is sent to those services, and the UI labels them. Everything else is fully working: downloads, copy as table, share links, encryption, QR codes, the shared report page and its import, automations' scheduling, version history, and backup files. The email step also offers a real "open in your email app" link.
 
+### Smart category suggestions
+
+Ledgerly can suggest a category from the description as you add an expense, and learns from every category you save.
+
+- **Runs on your device.** The suggestions are computed in the browser from your own expenses. Nothing is sent anywhere.
+- **What's stored**, all in this browser's `localStorage`: provenance on each expense (where it came from, and the suggestion that was on screen when you saved it), a log of the last 500 suggestion outcomes for the accuracy figure (the suggested and final category, confidence, and how it was shown, with no description text), and your settings. The suggestion keys start with `ledgerly:ml:`.
+- **Off by default for now**, while the feature is in development.
+- **Turn it on or off** under **Settings** (the gear in the header). The same card shows how often suggestions were accepted over the last 100, and **Reset learning** clears the outcome log and stops past suggestions from counting. Your expenses and their categories are never deleted.
+- **Never shared or exported.** Share links, reports, CSV, email, connected apps and backups carry only date, amount, category and description.
+
 ## Running it
 
 Requires Node.js 26 or newer. The version is pinned in `.nvmrc`, so with nvm, fnm or a similar version manager you can just run `nvm use` in the project folder. `.npmrc` turns on `engine-strict`, so `npm install` stops with a clear error on an older Node instead of half-working.
@@ -122,6 +132,7 @@ src/
     page.tsx              Dashboard
     expenses/page.tsx     Expense list with filters and export
     share/page.tsx        Share & sync hub
+    settings/page.tsx     Settings, including smart suggestions
     r/page.tsx            Read-only page that opens shared report links
     not-found.tsx
   components/
@@ -130,6 +141,7 @@ src/
     expenses/             Form, list, filter bar
     dashboard/            Summary cards and charts
     cloud/                Share & sync: provider (jobs, sync, automations, versions), composer, tray, hub tabs
+    settings/             Smart suggestions settings card
     ui/                   Button, Card, Modal, Drawer, Skeleton, icons, badges
   lib/
     types.ts              Expense types and categories
@@ -139,6 +151,7 @@ src/
     csv.ts                CSV generation and download
     format.ts             Currency and date formatting
     cloud/                Report templates, CSV/JSON/TSV output, share-link encoding and encryption, schedules, destinations
+    ml/                   Smart category suggestions: shared contract, settings store, feedback log
 packaging/linux/        Launcher, fallback server and README for the Linux package
 scripts/package-linux.mjs  Builds dist/ledgerly-linux.tar.gz
 ```
