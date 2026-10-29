@@ -7,9 +7,10 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { ExpenseProvider, useExpenses } from "@/components/providers/ExpenseProvider";
 import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
 import { Button } from "@/components/ui/Button";
-import { ChartIcon, ClockIcon, ListIcon, PlusIcon, ShareIcon, WalletIcon } from "@/components/ui/Icons";
+import { ChartIcon, ClockIcon, ListIcon, PlusIcon, SettingsIcon, ShareIcon, WalletIcon } from "@/components/ui/Icons";
 import { CloudProvider } from "@/components/cloud/CloudProvider";
 import { SyncStatus } from "@/components/cloud/SyncStatus";
+import { clearMlStorage } from "@/lib/ml/settings";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: ChartIcon },
@@ -50,15 +51,36 @@ function Header() {
           })}
         </nav>
 
+        {/* Settings is a header gear at every size: the mobile tab bar is full, and a text link would overflow the nav at sm. */}
+        <div className="ml-auto flex items-center sm:hidden">
+          <SettingsLink active={pathname.startsWith("/settings")} />
+        </div>
+
         <div className="ml-auto hidden items-center gap-3 sm:flex">
           <SyncStatus />
+          <SettingsLink active={pathname.startsWith("/settings")} />
           <Button onClick={openAdd} disabled={status !== "ready"}>
             <PlusIcon className="h-4 w-4" />
-            Add expense
+            {/* Icon-only between sm and md, where the full label plus the settings gear would overflow the header. */}
+            <span className="sm:max-md:sr-only">Add expense</span>
           </Button>
         </div>
       </div>
     </header>
+  );
+}
+
+function SettingsLink({ active }: { active: boolean }) {
+  return (
+    <Link
+      href="/settings"
+      aria-label="Settings"
+      title="Settings"
+      aria-current={active ? "page" : undefined}
+      className={`rounded-lg p-2 transition-colors ${active ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
+    >
+      <SettingsIcon className="h-5 w-5" />
+    </Link>
   );
 }
 
@@ -122,12 +144,13 @@ function StorageError() {
           size="sm"
           variant="danger"
           onClick={() => {
-            if (!window.confirm("This permanently erases the saved expense data in this browser. Continue?")) return;
+            if (!window.confirm("This permanently erases the saved expense data and smart suggestion settings in this browser. Continue?")) return;
             try {
               window.localStorage.removeItem("expense-tracker:expenses:v1");
             } catch {
               /* storage blocked: retry below will show the error again */
             }
+            clearMlStorage();
             retryLoad();
             replaceAll([]);
           }}
