@@ -87,3 +87,23 @@ export const SparklesIcon = (p: IconProps) => (
     <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />
   </svg>
 );
+
+export const TableIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 10h18M3 15h18M9 4v16" />
+  </svg>
+);
+
+export const CodeBracketIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M8 4H7a2 2 0 00-2 2v4a2 2 0 01-2 2 2 2 0 012 2v4a2 2 0 002 2h1M16 4h1a2 2 0 012 2v4a2 2 0 002 2 2 2 0 00-2 2v4a2 2 0 01-2 2h-1" />
+  </svg>
+);
+
+export const DocumentIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z" />
+    <path d="M14 3v5h5M9 13h6M9 17h6" />
+  </svg>
+);

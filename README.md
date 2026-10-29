@@ -8,7 +8,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Form validation**: required fields, positive amounts up to 2 decimals, no future dates, 120-character descriptions. Errors appear on blur and update as you type. Input like `1,250` or `$12` is accepted and normalized.
 - **Undo** after deleting, from the notification toast.
 - **Expense list** with search, category filter, date range (plus quick presets), sorting, a running total of the filtered results, and "Show more" paging.
-- **CSV export** of whatever the list currently shows (filters and sort applied). Cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
+- **Export** to CSV, JSON or PDF from the dashboard or the expense list. Export everything, or only what the list currently shows (filters and sort applied), and optionally include a totals-by-category summary. CSV files carry a UTF-8 byte-order mark for Excel and escape cells that start with `=`, `+`, `-` or `@` so spreadsheets don't run them as formulas. JSON keeps amounts as numbers. PDFs are generated in the browser with no library: a printable report with the summary, a paginated expense table and page numbers.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
 - **Responsive**: a top nav on desktop; a bottom tab bar with a floating add button on mobile, where dialogs open as bottom sheets.
@@ -77,7 +77,7 @@ How it works:
 8. **Dashboard.** Hover the bars and the donut to see tooltips. Check that the category list beside the donut matches the chart.
 9. **Search and filters.** On **Expenses**, type `gas` in search, choose a category, click a preset such as **Last month**, or pick custom dates. The count and total update. **Clear filters** resets them.
 10. **Sort.** Switch between newest, oldest, highest and lowest amount.
-11. **Export.** Click **Export CSV**. The downloaded file contains exactly the rows currently shown.
+11. **Export.** Click **Export** on the Expenses page, pick CSV, JSON or PDF, and choose between the rows currently shown and all expenses. The preview line shows the row count and total before you download. The dashboard's **Export** button exports everything.
 12. **Mobile.** Narrow the browser or use device mode in dev tools. Use the bottom bar and the round **+** button.
 13. **Keyboard.** Dialogs open with focus on the first field, trap Tab inside, and close with Escape.
 
@@ -100,6 +100,7 @@ src/
     layout/AppShell.tsx   Header, mobile nav, providers, storage error banner
     providers/            Expense state, toast notifications, add/edit/delete dialogs
     expenses/             Form, list, filter bar
+    export/               Export dialog (format, scope, summary toggle)
     dashboard/            Summary cards and charts
     ui/                   Button, Card, Modal, Skeleton, icons, badges
   lib/
@@ -107,7 +108,7 @@ src/
     storage.ts            localStorage load/save with validation
     validation.ts         Form validation rules
     analytics.ts          Filtering, sorting, totals, stats, sample data
-    csv.ts                CSV generation and download
+    export/               CSV, JSON and PDF builders, a dependency-free PDF writer, download helper
     format.ts             Currency and date formatting
 packaging/linux/        Launcher, fallback server and README for the Linux package
 scripts/package-linux.mjs  Builds dist/ledgerly-linux.tar.gz

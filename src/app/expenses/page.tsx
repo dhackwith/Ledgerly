@@ -3,13 +3,12 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { EMPTY_FILTERS, type ExpenseFilters, type SortKey } from "@/lib/types";
 import { filterExpenses, sortExpenses, sumAmounts } from "@/lib/analytics";
-import { downloadCSV } from "@/lib/csv";
 import { formatCurrency } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
-import { useToast } from "@/components/providers/ToastProvider";
 import { ExpenseFiltersBar } from "@/components/expenses/ExpenseFiltersBar";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
+import { ExportDialog } from "@/components/export/ExportDialog";
 import { SampleDataButton } from "@/components/SampleDataButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -22,12 +21,13 @@ const PAGE_SIZE = 50;
 export default function ExpensesPage() {
   const { expenses, status } = useExpenses();
   const { openAdd } = useExpenseDialogs();
-  const { notify } = useToast();
   const [filters, setFilters] = useState<ExpenseFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("date-desc");
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [exportOpen, setExportOpen] = useState(false);
   const deferredSearch = useDeferredValue(filters.search);
 
+  const sorted = useMemo(() => sortExpenses(expenses, sort), [expenses, sort]);
   const filtered = useMemo(
     () => sortExpenses(filterExpenses(expenses, { ...filters, search: deferredSearch }), sort),
     [expenses, filters, deferredSearch, sort],
@@ -40,17 +40,6 @@ export default function ExpensesPage() {
     setVisible(PAGE_SIZE);
   };
 
-  const handleExport = () => {
-    if (filtered.length === 0) return;
-    try {
-      downloadCSV(filtered);
-      notify(`Exported ${filtered.length} expense${filtered.length === 1 ? "" : "s"} to CSV`);
-    } catch (err) {
-      console.error(err);
-      notify("Export failed. Please try again.", { variant: "error" });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -59,9 +48,9 @@ export default function ExpensesPage() {
           <p className="mt-1 text-sm text-slate-500">Search, filter, edit, and export your expenses.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleExport} disabled={status !== "ready" || filtered.length === 0}>
+          <Button variant="secondary" onClick={() => setExportOpen(true)} disabled={status !== "ready"}>
             <DownloadIcon className="h-4 w-4" />
-            Export CSV
+            Export
           </Button>
           <Button onClick={openAdd} disabled={status !== "ready"} className="sm:hidden">
             <PlusIcon className="h-4 w-4" />
@@ -138,6 +127,13 @@ export default function ExpensesPage() {
           </>
         )}
       </Card>
+
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        expenses={sorted}
+        filtered={isFiltered ? filtered : undefined}
+      />
     </div>
   );
 }
