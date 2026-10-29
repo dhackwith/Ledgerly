@@ -9,7 +9,7 @@ import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers
 import { BudgetProvider } from "@/components/providers/BudgetProvider";
 import { RecurringProvider } from "@/components/providers/RecurringProvider";
 import { Button } from "@/components/ui/Button";
-import { AnalyticsIcon, ChartIcon, ListIcon, PlusIcon, RepeatIcon, TagIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
+import { AnalyticsIcon, ChartIcon, ListIcon, PlusIcon, RepeatIcon, TagIcon, TargetIcon, TrendUpIcon, WalletIcon } from "@/components/ui/Icons";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: ChartIcon },
@@ -18,6 +18,7 @@ const NAV = [
   { href: "/budgets", label: "Budgets", icon: TargetIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
   { href: "/categories", label: "Categories", icon: TagIcon },
+  { href: "/vendors", label: "Vendors", icon: TrendUpIcon },
 ];
 
 function Header() {
@@ -74,7 +75,7 @@ function MobileNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
       aria-label="Main"
     >
-      {/* One column per nav item plus the centre Add button. */}
+      {/* One column per nav item plus the centre Add button, so new NAV entries need no change here. */}
       <div className="grid h-16 items-center" style={{ gridTemplateColumns: `repeat(${NAV.length + 1}, minmax(0, 1fr))` }}>
         {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <MobileLink
