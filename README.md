@@ -11,6 +11,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **CSV export** of whatever the list currently shows (filters and sort applied). Cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
 - **Budgets**: a monthly limit per category, edited inline on the Budgets page. Progress bars show spend against each limit (with an "80% used" / "Over by $X" / "On track" label, never colour alone), a projected month-end hint when you're close, a compact card and an over-budget banner on the dashboard, and a toast the moment a category crosses 80% or goes over.
+- **Recurring expenses**: schedule expenses that repeat daily, weekly, monthly or yearly (every N units, with an optional end date). Due occurrences are recorded automatically when the app opens, generated expenses are tagged in the list, and rules can be paused, edited or deleted without touching existing expenses. The dashboard shows what is coming up next.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
 - **Responsive**: a top nav on desktop; a bottom tab bar with a floating add button on mobile, where dialogs open as bottom sheets.
 - **Multi-tab sync**: changes in one tab show up in other open tabs.
@@ -88,6 +89,7 @@ To reset all data, run this in the browser console:
 ```js
 localStorage.removeItem("expense-tracker:expenses:v1");
 localStorage.removeItem("expense-tracker:budgets:v1");
+localStorage.removeItem("expense-tracker:recurring:v1");
 ```
 
 ## Project structure
@@ -99,12 +101,14 @@ src/
     page.tsx              Dashboard
     expenses/page.tsx     Expense list with filters and export
     budgets/page.tsx      Monthly limits per category with progress
+    recurring/page.tsx    Recurring rules and upcoming occurrences
     not-found.tsx
   components/
     layout/AppShell.tsx   Header, mobile nav, providers, storage error banner
-    providers/            Expense state, budgets, toast notifications, add/edit/delete dialogs
+    providers/            Expense state, budgets, recurring rules, toast notifications, add/edit/delete dialogs
     expenses/             Form, list, filter bar
     budgets/              Budget progress bar and state label
+    recurring/            Recurring rule form and lists
     dashboard/            Summary cards, budgets card and charts
     ui/                   Button, Card, Modal, Skeleton, icons, badges
   lib/
@@ -113,6 +117,8 @@ src/
     budgets.ts            Budget progress, summary and month-end projection
     budgetStorage.ts      localStorage load/save for budget limits
     validation.ts         Form validation rules
+    recurring.ts          Recurrence schedule math, materialisation and rule validation
+    recurringStorage.ts   localStorage load/save for recurring rules
     analytics.ts          Filtering, sorting, totals, stats, sample data
     csv.ts                CSV generation and download
     format.ts             Currency and date formatting

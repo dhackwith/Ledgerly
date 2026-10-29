@@ -4,7 +4,7 @@ import type { Expense } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/categories";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
-import { PencilIcon, TrashIcon } from "@/components/ui/Icons";
+import { PencilIcon, RepeatIcon, TrashIcon } from "@/components/ui/Icons";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
 
 interface Props {
@@ -33,6 +33,15 @@ export function ExpenseList({ expenses, compact = false }: Props) {
               <p className="truncate text-sm font-medium text-slate-900">{e.description}</p>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                 <time dateTime={e.date}>{formatDate(e.date)}</time>
+                {e.recurringId && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-700 ring-1 ring-inset ring-brand-600/20"
+                    title="Generated from a recurring rule"
+                  >
+                    <RepeatIcon className="h-3 w-3" />
+                    Recurring
+                  </span>
+                )}
                 {!compact && (
                   <>
                     <span aria-hidden className="hidden sm:inline">

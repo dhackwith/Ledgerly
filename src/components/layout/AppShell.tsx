@@ -7,13 +7,15 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { ExpenseProvider, useExpenses } from "@/components/providers/ExpenseProvider";
 import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
 import { BudgetProvider } from "@/components/providers/BudgetProvider";
+import { RecurringProvider } from "@/components/providers/RecurringProvider";
 import { Button } from "@/components/ui/Button";
-import { ChartIcon, ListIcon, PlusIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
+import { ChartIcon, ListIcon, PlusIcon, RepeatIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: ChartIcon },
   { href: "/expenses", label: "Expenses", icon: ListIcon },
   { href: "/budgets", label: "Budgets", icon: TargetIcon },
+  { href: "/recurring", label: "Recurring", icon: RepeatIcon },
 ];
 
 function Header() {
@@ -70,7 +72,7 @@ function MobileNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
       aria-label="Main"
     >
-      <div className="grid h-16 grid-cols-4 items-center">
+      <div className="grid h-16 grid-cols-5 items-center">
         {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <MobileLink
             key={href}
@@ -149,16 +151,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ToastProvider>
       <ExpenseProvider>
         <BudgetProvider>
-          <ExpenseDialogProvider>
-            <div className="min-h-screen pb-24 sm:pb-12">
-              <Header />
-              <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-                <StorageError />
-                {children}
-              </main>
-            </div>
-            <MobileNav />
-          </ExpenseDialogProvider>
+          <RecurringProvider>
+            <ExpenseDialogProvider>
+              <div className="min-h-screen pb-24 sm:pb-12">
+                <Header />
+                <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+                  <StorageError />
+                  {children}
+                </main>
+              </div>
+              <MobileNav />
+            </ExpenseDialogProvider>
+          </RecurringProvider>
         </BudgetProvider>
       </ExpenseProvider>
     </ToastProvider>
