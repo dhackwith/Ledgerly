@@ -7,6 +7,9 @@ import { useToast } from "./ToastProvider";
 
 type Status = "loading" | "ready" | "error";
 
+/** An expense input that may carry the id of the recurring rule that generated it. */
+type GeneratedExpenseInput = ExpenseInput & Partial<Pick<Expense, "recurringId">>;
+
 interface ExpenseContextValue {
   expenses: Expense[];
   status: Status;
@@ -15,7 +18,7 @@ interface ExpenseContextValue {
   updateExpense: (id: string, input: ExpenseInput) => void;
   deleteExpense: (id: string) => Expense | undefined;
   restoreExpenses: (items: Expense[]) => void;
-  addMany: (inputs: ExpenseInput[]) => void;
+  addMany: (inputs: GeneratedExpenseInput[]) => void;
   replaceAll: (items: Expense[]) => void;
   retryLoad: () => void;
 }
@@ -28,7 +31,7 @@ export function useExpenses(): ExpenseContextValue {
   return ctx;
 }
 
-function create(input: ExpenseInput): Expense {
+function create(input: GeneratedExpenseInput): Expense {
   const now = new Date().toISOString();
   return { ...input, id: generateId(), createdAt: now, updatedAt: now };
 }
@@ -112,7 +115,7 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addMany = useCallback((inputs: ExpenseInput[]) => {
+  const addMany = useCallback((inputs: GeneratedExpenseInput[]) => {
     setExpenses((list) => [...inputs.map(create), ...list]);
   }, []);
 

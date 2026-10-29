@@ -1,27 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { computeStats, sortExpenses, sumAmounts, totalsByCategory, totalsByDay, totalsByMonth } from "@/lib/analytics";
 import { formatMonthKey, monthKey, todayISO } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
+import { BudgetAlertBanner, BudgetsCard } from "@/components/dashboard/BudgetsCard";
 import { CategoryDonut, DailyBarChart, MonthlyBarChart } from "@/components/dashboard/Charts";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
+import { ExportDialog } from "@/components/export/ExportDialog";
+import { UpcomingRecurringCard } from "@/components/recurring/UpcomingRecurringCard";
 import { SampleDataButton } from "@/components/SampleDataButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CardSkeletonGrid, ListSkeleton, Skeleton } from "@/components/ui/Skeleton";
-import { ChartIcon, PlusIcon } from "@/components/ui/Icons";
+import { ChartIcon, DownloadIcon, PlusIcon } from "@/components/ui/Icons";
 
 export default function DashboardPage() {
   const { expenses, status } = useExpenses();
   const { openAdd } = useExpenseDialogs();
+  const [exportOpen, setExportOpen] = useState(false);
 
   const data = useMemo(() => {
     const thisMonth = expenses.filter((e) => monthKey(e.date) === monthKey(todayISO()));
+    const byDate = sortExpenses(expenses, "date-desc");
     return {
       stats: computeStats(expenses),
       monthly: totalsByMonth(expenses, 6),
@@ -29,16 +34,25 @@ export default function DashboardPage() {
       categories: totalsByCategory(thisMonth.length ? thisMonth : expenses),
       categoriesTotal: sumAmounts(thisMonth.length ? thisMonth : expenses),
       categoriesScope: thisMonth.length ? formatMonthKey(monthKey(todayISO()), "long") : "All time",
-      recent: sortExpenses(expenses, "date-desc").slice(0, 6),
+      recent: byDate.slice(0, 6),
+      byDate,
     };
   }, [expenses]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">An overview of where your money is going.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="text-sm text-slate-500">An overview of where your money is going.</p>
+        </div>
+        <Button variant="secondary" onClick={() => setExportOpen(true)} disabled={status !== "ready"} className="self-start sm:self-auto">
+          <DownloadIcon className="h-4 w-4" />
+          Export
+        </Button>
       </div>
+
+      <BudgetAlertBanner />
 
       {status === "loading" && (
         <>
@@ -73,6 +87,8 @@ export default function DashboardPage() {
         <>
           <SummaryCards stats={data.stats} />
 
+          <BudgetsCard />
+
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Monthly spending" subtitle="Last 6 months">
               <MonthlyBarChart data={data.monthly} />
@@ -99,8 +115,12 @@ export default function DashboardPage() {
               {data.recent.length ? <ExpenseList expenses={data.recent} compact /> : <ListSkeleton rows={3} />}
             </Card>
           </div>
+
+          <UpcomingRecurringCard />
         </>
       )}
+
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} expenses={data.byDate} />
     </div>
   );
 }

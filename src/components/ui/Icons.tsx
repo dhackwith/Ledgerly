@@ -87,3 +87,67 @@ export const SparklesIcon = (p: IconProps) => (
     <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />
   </svg>
 );
+
+export const TableIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 10h18M3 15h18M9 4v16" />
+  </svg>
+);
+
+export const CodeBracketIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M8 4H7a2 2 0 00-2 2v4a2 2 0 01-2 2 2 2 0 012 2v4a2 2 0 002 2h1M16 4h1a2 2 0 012 2v4a2 2 0 002 2 2 2 0 00-2 2v4a2 2 0 01-2 2h-1" />
+  </svg>
+);
+
+export const DocumentIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z" />
+    <path d="M14 3v5h5M9 13h6M9 17h6" />
+  </svg>
+);
+
+export const AnalyticsIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+);
+
+export const LightbulbIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M9 18h6M10 22h4" />
+    <path d="M12 2a7 7 0 00-4 12.74V17h8v-2.26A7 7 0 0012 2z" />
+  </svg>
+);
+
+export const TargetIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1" />
+  </svg>
+);
+
+export const AlertTriangleIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    <path d="M12 9v4M12 17h.01" />
+  </svg>
+);
+
+export const CheckCircleIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+  </svg>
+);
+
+export const RepeatIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11V9a4 4 0 014-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v2a4 4 0 01-4 4H3" />
+  </svg>
+);

@@ -6,12 +6,17 @@ import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { ExpenseProvider, useExpenses } from "@/components/providers/ExpenseProvider";
 import { ExpenseDialogProvider, useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
+import { BudgetProvider } from "@/components/providers/BudgetProvider";
+import { RecurringProvider } from "@/components/providers/RecurringProvider";
 import { Button } from "@/components/ui/Button";
-import { ChartIcon, ListIcon, PlusIcon, WalletIcon } from "@/components/ui/Icons";
+import { AnalyticsIcon, ChartIcon, ListIcon, PlusIcon, RepeatIcon, TargetIcon, WalletIcon } from "@/components/ui/Icons";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: ChartIcon },
+  { href: "/analytics", label: "Analytics", icon: AnalyticsIcon },
   { href: "/expenses", label: "Expenses", icon: ListIcon },
+  { href: "/budgets", label: "Budgets", icon: TargetIcon },
+  { href: "/recurring", label: "Recurring", icon: RepeatIcon },
 ];
 
 function Header() {
@@ -68,9 +73,15 @@ function MobileNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
       aria-label="Main"
     >
-      <div className="grid h-16 grid-cols-3 items-center">
-        {NAV.slice(0, 1).map(({ href, label, icon: Icon }) => (
-          <MobileLink key={href} href={href} label={label} active={pathname === "/"} icon={<Icon className="h-5 w-5" />} />
+      <div className="grid h-16 grid-cols-6 items-center">
+        {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
+          <MobileLink
+            key={href}
+            href={href}
+            label={label}
+            active={href === "/" ? pathname === "/" : pathname.startsWith(href)}
+            icon={<Icon className="h-5 w-5" />}
+          />
         ))}
         <div className="flex justify-center">
           <button
@@ -83,7 +94,7 @@ function MobileNav() {
             <PlusIcon className="h-6 w-6" />
           </button>
         </div>
-        {NAV.slice(1).map(({ href, label, icon: Icon }) => (
+        {NAV.slice(2).map(({ href, label, icon: Icon }) => (
           <MobileLink key={href} href={href} label={label} active={pathname.startsWith(href)} icon={<Icon className="h-5 w-5" />} />
         ))}
       </div>
@@ -140,16 +151,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <ExpenseProvider>
-        <ExpenseDialogProvider>
-          <div className="min-h-screen pb-24 sm:pb-12">
-            <Header />
-            <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-              <StorageError />
-              {children}
-            </main>
-          </div>
-          <MobileNav />
-        </ExpenseDialogProvider>
+        <BudgetProvider>
+          <RecurringProvider>
+            <ExpenseDialogProvider>
+              <div className="min-h-screen pb-24 sm:pb-12">
+                <Header />
+                <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+                  <StorageError />
+                  {children}
+                </main>
+              </div>
+              <MobileNav />
+            </ExpenseDialogProvider>
+          </RecurringProvider>
+        </BudgetProvider>
       </ExpenseProvider>
     </ToastProvider>
   );
