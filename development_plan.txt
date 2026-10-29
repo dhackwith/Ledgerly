@@ -1,0 +1,640 @@
+================================================================================
+LEDGERLY: SMART CATEGORY SUGGESTIONS
+Technical analysis and development plan
+Date: 2026-10-28
+Status: Proposal, before implementation
+================================================================================
+
+CONTENTS
+  0. Summary and key decisions
+  1. Core technical challenges
+  2. Data: what to collect and how
+  3. ML approach
+  4. Privacy and data security
+  5. User experience flow
+  6. Edge cases and error handling
+  7. Deployment and maintenance
+  8. Testing strategy
+  9. Implementation phases
+ 10. Open questions
+
+
+--------------------------------------------------------------------------------
+0. SUMMARY AND KEY DECISIONS
+--------------------------------------------------------------------------------
+
+Goal: when a user types an expense, Ledgerly suggests the category, learns
+from every confirmation and correction, and gets more accurate the more the
+app is used.
+
+What the codebase tells us (this shapes everything below):
+
+  - Ledgerly is local-first. Expenses live in localStorage
+    ("expense-tracker:expenses:v1", src/lib/storage.ts), there is no backend,
+    and the README promises "nothing leaves your machine".
+  - The label space is small and closed: six categories (Food,
+    Transportation, Entertainment, Shopping, Bills, Other) defined as a const
+    union in src/lib/types.ts.
+  - Each expense has only four useful signals: description (max 120 chars,
+    usually a merchant name or a few words), amount, date (no time of day),
+    and createdAt/updatedAt timestamps. No merchant ID, MCC code or location.
+  - Per-user data is tiny: zero on day one, tens after a month, a few
+    thousand after years.
+  - The form (src/components/expenses/ExpenseForm.tsx) puts the category
+    picker ABOVE the description field, so today the user picks a category
+    before typing the one field we would predict from.
+  - There is no test framework in the project yet.
+
+Key decisions:
+
+  D1. The model runs entirely in the browser. No server, no third-party ML
+      API, no telemetry. This keeps the existing privacy promise and needs
+      no new infrastructure.
+
+  D2. The model is a derived cache, not a stored artifact. The user's
+      expenses ARE the training set. We rebuild the model from them on load
+      (milliseconds for thousands of short strings). Benefits:
+        - deleting an expense removes it from the model automatically;
+        - restore, undo, imports and multi-tab sync need no special model
+          handling;
+        - no model file to version, migrate, corrupt or exceed quota with;
+        - changing the algorithm is a code change, not a data migration.
+      The only new things we persist are a small provenance field on each
+      expense and an optional, capped local feedback log for metrics.
+
+  D3. Use simple, data-efficient methods, not deep learning: an exact/fuzzy
+      "merchant memory" plus a multinomial Naive Bayes classifier over
+      character n-grams, word tokens, amount band and date features, seeded
+      with a built-in keyword lexicon for cold start. Sentence embeddings are
+      an optional later phase, and an LLM API is rejected (see 3.4).
+
+  D4. Suggest, don't decide. The UI pre-selects a category only when
+      confidence is high and the user hasn't touched the picker; otherwise it
+      shows suggestion chips. A user's explicit choice is never overwritten.
+
+
+--------------------------------------------------------------------------------
+1. CORE TECHNICAL CHALLENGES
+--------------------------------------------------------------------------------
+
+1.1 Cold start
+    A new user has no labeled data, and personalization is the whole point.
+    We need useful suggestions on expense #1 ("Starbucks" -> Food,
+    "Uber" -> Transportation) that give way to the user's own habits as soon
+    as they appear (this user files "Starbucks" under Entertainment).
+    Approach: lexicon priors that act as pseudo-counts and are quickly
+    outweighed by real data (3.2).
+
+1.2 Tiny, short, noisy text
+    Descriptions are 1 to 5 words, often abbreviations, typos, store numbers
+    or bank-style strings ("SQ *BLUE BOTTLE 0423", "amzn mktp"). Word-level
+    models break on these; character n-grams and normalization handle them.
+
+1.3 Very little data per user
+    Rules out anything that needs thousands of examples per class. The
+    method has to learn useful things from 1 to 5 examples per merchant.
+
+1.4 Feedback loops and acceptance bias
+    If we pre-fill a category, many users will accept it without looking.
+    Training on those accepts can lock in a wrong suggestion ("the model
+    agrees with itself"). We must record whether a label was suggested and
+    accepted vs chosen independently, and avoid pre-filling at low
+    confidence.
+
+1.5 Ambiguity and concept drift
+    "Amazon" can be Shopping, Bills (subscription) or Entertainment (Prime
+    Video). Habits change over time (a user starts filing coffee under
+    "Other"). We need amount as a tie-breaker, multiple suggestions when
+    ambiguous, and recency weighting so old habits fade.
+
+1.6 Class imbalance and the "Other" catch-all
+    Food usually dominates; "Other" is a junk drawer with no consistent
+    pattern. A naive model over-predicts the majority class and "Other".
+    Needs smoothed priors, calibration, and a rule that "Other" is suggested
+    only with strong evidence.
+
+1.7 Calibrated confidence
+    The UX depends on knowing WHEN to be confident. Naive Bayes is famously
+    over-confident, so raw probabilities can't drive thresholds directly.
+    We need a calibrated score, tuned by replaying real-shaped data (8.3).
+
+1.8 Performance in the form
+    Predictions run on every keystroke (debounced). Target: < 5 ms per
+    prediction and < 50 ms full rebuild for 5,000 expenses on a mid-range
+    phone, without blocking input. Bundle budget: < 15 KB gzipped for the
+    ML code plus lexicon.
+
+1.9 Fitting into the existing app
+    - localStorage is shared with up to 12 full snapshots (ledgerly:
+      snapshots:v1) and cloud state (ledgerly:cloud:v1), so quota is tight.
+    - ExpenseProvider reloads expenses on any storage event whose key
+      starts with "expense-tracker:". Any ML keys must NOT use that prefix
+      or they'll cause needless reloads in other tabs. Use "ledgerly:ml:".
+    - Next.js App Router: all ML code is client-only and must never touch
+      `window` during server rendering.
+
+
+--------------------------------------------------------------------------------
+2. DATA: WHAT TO COLLECT AND HOW
+--------------------------------------------------------------------------------
+
+2.1 Training data we already have
+    Every saved expense is a labeled example: (description, amount, date)
+    -> category. Nothing new needs to be collected to start.
+
+2.2 New per-expense metadata (optional field, backward compatible)
+
+    interface ExpenseMeta {
+      source: "manual" | "import" | "shared-import" | "sample";
+      suggestion?: {
+        category: Category;       // what we suggested at save time
+        confidence: number;       // calibrated 0..1
+        shown: "preselected" | "chips" | "none";
+        accepted: boolean;        // final category == suggested category
+      };
+      recategorizedAt?: string;   // set when the category is changed by edit
+    }
+
+    Expense gains `meta?: ExpenseMeta`.
+
+    Why each field:
+      - source: SAMPLE DATA MUST BE EXCLUDED from training (it's fake and
+        would teach the model wrong habits). Shared-import (from someone
+        else's share link) is down-weighted because it reflects another
+        person's habits.
+      - suggestion: lets us detect acceptance bias (1.4) and compute local
+        accuracy metrics without a separate store.
+      - recategorizedAt: an edit that changes the category is the strongest
+        possible signal ("you got it wrong"), so it gets extra weight.
+
+    Compatibility:
+      - isValidExpense() ignores unknown fields and loadExpenses() spreads
+        the record, so old data loads unchanged and meta survives.
+      - Records with no meta are treated as source "manual", accepted-unknown.
+      - PortableExpense (share links, reports, exports) has only date,
+        category, amount and description, so meta never leaves the device
+        through sharing. Keep it that way, and add a test that proves it.
+      - Full Backup JSON: keep meta OUT of backups for v1 (simpler, and a
+        restored backup rebuilds the model from labels anyway).
+
+2.3 Where provenance gets set
+      - ExpenseDialogProvider -> addExpense / updateExpense: "manual", plus
+        suggestion info passed up from the form.
+      - SampleDataButton -> addMany: "sample".
+      - CloudProvider import paths (backup restore and shared report
+        import): "import" or "shared-import".
+    This means addExpense / addMany / updateExpense take an optional meta
+    argument; existing callers keep working.
+
+2.4 Local feedback log (optional, for metrics only)
+    Key "ledgerly:ml:feedback:v1": a ring buffer of the last 500 events
+    { t, predicted, confidence, final, shown } with NO description text.
+    Used only for the on-device accuracy panel (5.6). Capped size, cleared
+    with the rest of the data. If it fails to write, we skip it silently.
+
+2.5 Data we deliberately do NOT collect
+    No keystroke logs, no partially typed text, no device or location
+    data, nothing sent off the device.
+
+2.6 Built-in seed data (ships with the app)
+    A hand-curated lexicon, about 300 to 600 entries: common merchants and
+    keywords per category (e.g. "uber, lyft, shell, parking, metro" ->
+    Transportation; "netflix, spotify, cinema" -> Entertainment; "rent,
+    electric, insurance, verizon" -> Bills). Region-neutral to begin with;
+    reviewed in code review like any other source file. It's static and
+    contains no user data.
+
+2.7 Benchmark data (for development, never shipped as training data)
+    A deterministic synthetic generator (fixed seed) that produces
+    realistic users: recurring bills on the same day of the month,
+    repeated merchants with typos and store-number noise, ambiguous
+    merchants, habit changes partway through, and class imbalance. Used for
+    replay evaluation and CI accuracy gates (8.3). Also lets us test
+    personalization: two synthetic users who label the same merchant
+    differently must each get their own answer.
+
+
+--------------------------------------------------------------------------------
+3. ML APPROACH
+--------------------------------------------------------------------------------
+
+3.1 Problem framing
+    Single-label classification into 6 classes, learned online, per user,
+    from a handful to thousands of examples, plus a calibrated confidence
+    and a ranked top-3. The output is a suggestion, so ranking quality
+    (top-3 accuracy) matters as much as top-1.
+
+3.2 Recommended design: a three-layer cascade
+
+    Input -> normalize -> features -> [A] memory, [B] Naive Bayes -> blend
+          -> calibrate -> top-3 with confidence and a reason
+
+    Normalization (shared by all layers)
+      - Unicode NFKC, lowercase, strip accents for matching.
+      - Remove noise: store numbers ("#0423"), long digit runs, card-style
+        prefixes ("sq *", "tst*", "pp*"), repeated punctuation.
+      - Collapse whitespace. Keep the original text for display.
+      - All regexes linear-time (no nested quantifiers) to rule out ReDoS.
+
+    [A] Merchant memory (exact and near-exact recall)
+      - Map normalized description -> per-category counts, with recency
+        decay. Also keyed on the first 1 to 2 significant tokens so
+        "starbucks reserve" matches "starbucks".
+      - Fuzzy fallback: compare trigram-set (Jaccard) similarity against
+        known keys, threshold about 0.6, for typos ("starbuks").
+      - This alone answers most real entries, because people repeat the
+        same merchants. If memory is strong (>= 3 consistent labels) it
+        dominates the blend.
+
+    [B] Multinomial Naive Bayes over sparse features
+      Features per expense:
+        - character 3- to 5-grams of the normalized text (with word-boundary
+          markers), for robustness to typos and abbreviations;
+        - word unigrams and bigrams;
+        - lexicon hits ("lex:transport") as their own features;
+        - amount band, log-scaled (e.g. <5, 5-15, 15-40, 40-100,
+          100-300, 300+), which separates coffee from groceries from rent;
+        - day-of-month band (1-5, 6-25, 26-31) and weekday/weekend, which
+          help with bills and entertainment;
+        - recurrence flag: same normalized description with an amount
+          within 5% about 28 to 31 days earlier -> strong Bills signal.
+      Learning:
+        - Counts per (feature, class) with Laplace/Lidstone smoothing
+          (alpha about 0.1 to 0.5, tuned by replay).
+        - Lexicon entries enter as Dirichlet pseudo-counts (equal to about
+          2 real examples), so cold start works and the user's own labels
+          take over after a couple of examples.
+        - Example weights: manual = 1.0; edit that changed the category =
+          2.0; accepted pre-selected suggestion = 0.7 (acceptance-bias
+          damping); import = 1.0; shared-import = 0.3; sample = 0
+          (excluded).
+        - Recency: weight *= 0.5 ^ (age_days / half_life), half-life about
+          180 days, so habit changes take effect within weeks without
+          forgetting rare-but-stable categories.
+      Why NB: it learns from very few examples, training is a single
+      counting pass, updates are incremental, it's tiny and fast,
+      deterministic, and easy to explain ("matched 'uber' 6 times").
+
+    Blend and calibration
+      - Combine A and B as a log-linear mix; A's weight rises with how many
+        consistent memory hits there are.
+      - Calibrate with temperature scaling on the NB log-probabilities;
+        fit the temperature and blend weights offline on the synthetic
+        benchmark and ship them as constants. Validate with reliability
+        curves (expected calibration error < 0.05 on the benchmark).
+      - Penalize "Other": suggest it only if its calibrated probability
+        beats the runner-up by a clear margin.
+
+    Output
+      { ranked: [{category, p}...3], confidence, reason, modelVersion }
+      `reason` is a short human-readable explanation built from the top
+      contributing evidence, e.g. "You filed 'Uber' as Transportation 6
+      times" or "Looks like a monthly bill (same amount as last month)".
+
+3.3 Training lifecycle
+      - On load (status "ready"): build the model from all non-sample
+        expenses. For fewer than about 2,000 expenses, run it synchronously
+        inside useMemo. Above that, build in a Web Worker and serve lexicon-
+        only suggestions until it's ready.
+      - On add/edit/delete: rebuild (it's cheap) or apply an incremental
+        count update; correctness is identical because the model is derived.
+      - Nothing to persist, so no migrations. MODEL_VERSION is a code
+        constant recorded in meta.suggestion for metrics.
+
+3.4 Alternatives considered
+
+    Approach                      Verdict
+    ----------------------------  ------------------------------------------
+    Rules/keywords only           Used as the cold-start prior. Alone it
+                                  never learns personal habits.
+    Online logistic regression    Good candidate for phase 3: better
+    (SGD, hashed features)        calibrated than NB, but needs more data
+                                  and tuning. Swap it in behind the same
+                                  interface if replay shows a clear gain.
+    kNN over sentence embeddings  Generalizes semantically ("Lyft" learned
+    (e.g. a MiniLM model via      from "Uber"), but means a 20 to 90 MB
+    transformers.js / ONNX)       download, a WASM runtime and slower phone
+                                  performance. Optional opt-in phase 4,
+                                  lazy-loaded, never required.
+    Gradient-boosted trees        No real advantage for sparse text with
+                                  tiny data; heavier to ship.
+    Cloud LLM / third-party API   Rejected: sends financial descriptions
+                                  off-device (breaks the README promise),
+                                  costs money, needs keys and a backend,
+                                  adds latency, fails offline.
+    Global model trained on all   Rejected for now: there is no server,
+    users / federated learning    and collecting this data would need
+                                  consent flows, a privacy review and
+                                  infrastructure. The shipped lexicon gets
+                                  most of the cold-start benefit.
+
+3.5 Success criteria (on the synthetic benchmark, prequential replay)
+      - Top-1 accuracy >= 60% over the first 10 expenses (lexicon only).
+      - Top-1 accuracy >= 85% and top-3 >= 97% after 50 expenses.
+      - Pre-selected suggestions are correct >= 95% of the time.
+      - Expected calibration error < 0.05.
+      - Prediction p95 < 5 ms; rebuild of 5,000 expenses < 50 ms in Node.
+
+
+--------------------------------------------------------------------------------
+4. PRIVACY AND DATA SECURITY
+--------------------------------------------------------------------------------
+
+4.1 Principles
+      - On-device only. No network calls from ML code; enforce with a test
+        that fails if src/lib/ml imports fetch, XMLHttpRequest, WebSocket or
+        sendBeacon, and with an ESLint no-restricted-globals rule scoped to
+        that folder.
+      - Data minimization: the model holds aggregate counts, not copies of
+        descriptions beyond what the expense list already has. The
+        feedback log contains no text.
+      - Deletion works by construction: delete an expense and it's gone
+        from the model on the next rebuild. "Clear all data" in AppShell
+        also removes ledgerly:ml:* keys.
+      - User control: a setting to turn suggestions off, and a "Reset
+        learning" button that clears the feedback log and ignores past
+        suggestion metadata (labels stay, since they're the user's data).
+
+4.2 Sharing and export boundaries
+      - Share links, reports, CSV, email and connected-app payloads are
+        built from PortableExpense, which has no meta. Add a regression
+        test that serializes every template and asserts there's no "meta",
+        "suggestion" or "confidence" in the output.
+      - Encrypted share links are unchanged.
+
+4.3 Integrity and abuse cases
+      - Poisoning through imports: a crafted backup or shared report could
+        try to skew the model. Mitigations: shared-import weight 0.3, a cap
+        on per-feature counts from any single import batch, description
+        length already capped at 120 chars, and import is always a user
+        action.
+      - Malicious strings: normalization never evals or builds regexes from
+        user text. Reasons in the UI render as React text, never HTML.
+      - Resource exhaustion: cap features per expense (about 200) and total
+        vocabulary (about 50k features; prune least-recently-seen) so a huge
+        import can't freeze the tab.
+      - Storage: the new keys are small and capped; on quota errors ML
+        writes fail silently and never interrupt saving expenses.
+
+4.4 Documentation
+    Update the README to explain how suggestions work, that they run on the
+    device, what's stored, and how to turn them off or reset them.
+
+
+--------------------------------------------------------------------------------
+5. USER EXPERIENCE FLOW
+--------------------------------------------------------------------------------
+
+5.1 Form changes (ExpenseForm.tsx)
+      - Reorder fields to Amount, Description, Category, Date, so the
+        description is typed before the category. Date defaults to today
+        and is the field changed least often. (Alternative if we keep the
+        layout: put suggestion chips under Description and let them set the
+        category above. Worse on mobile because of the scroll distance.)
+      - As the user types (debounced about 150 ms, after >= 2 characters),
+        compute suggestions using description, amount and date.
+
+5.2 Suggestion states
+      - High confidence (>= 0.85 calibrated) AND the category hasn't been
+        touched: pre-select it. Show a small "Suggested" tag on that tile
+        with the reason as a tooltip/secondary line.
+      - Medium (0.5 to 0.85) or ambiguous: don't pre-select. Show up to 3
+        chips ("Food 62%", "Shopping 25%"); one tap selects.
+      - Low (< 0.5) or text too short: show nothing. No noise.
+      - The user picked a category: never change it, even if later typing
+        changes the prediction. Suggestions can still show as chips.
+      - Editing an existing expense: never auto-change its category. Show a
+        chip only if the model strongly disagrees (>= 0.9 for a different
+        class), as a gentle "Did you mean...?".
+      - Submitting with nothing selected still fails validation as today.
+        We don't silently submit a suggestion the user never saw.
+
+5.3 Accessibility
+      - The pre-selected tile is a normal checked radio, so screen readers
+        announce it. Add an aria-live="polite" region that says
+        "Suggested category: Food" once per change, not on every keystroke.
+      - Chips are buttons with clear labels ("Use Food, 62 percent").
+      - Colour is never the only signal; the "Suggested" tag has text.
+
+5.4 Learning loop the user can see
+      - After saving, the toast can mention it once in a while ("Got it,
+        we'll suggest Bills for 'Comcast' next time") when a correction
+        changed the model's answer, at most once per session.
+      - After correcting a category on edit: offer "Also change 4 similar
+        expenses?" (same normalized merchant, different category), always
+        with a preview and Undo through the existing toast and snapshot
+        mechanism.
+
+5.5 Bulk import
+      Imported expenses already have categories, so no prediction is
+      needed. Phase 3 can add a "Review possible mis-categorizations"
+      list: imported items where the model strongly disagrees, for the user
+      to check.
+
+5.6 Settings and transparency
+      Small "Smart suggestions" panel: on/off toggle, local accuracy over
+      the last 100 suggestions (from the feedback log), "Reset learning",
+      and a one-line explanation that it all runs on this device.
+
+
+--------------------------------------------------------------------------------
+6. EDGE CASES AND ERROR HANDLING
+--------------------------------------------------------------------------------
+
+6.1 Input edge cases
+      - Empty, 1-char or generic text ("misc", "stuff", "x", "test"):
+        no suggestion; generic words go on a stoplist.
+      - Numbers or symbols only ("1234", "$$$"): normalize to empty ->
+        rely on amount/date features only, so confidence will be low.
+      - Non-English, emoji, CJK, RTL: NFKC plus character n-grams work for
+        any script; never assume ASCII. Test with fixtures.
+      - Very long text: already capped at 120 chars by validation.
+      - Typos and spacing variants: covered by char n-grams and fuzzy
+        memory.
+
+6.2 Data edge cases
+      - Zero history: lexicon only. Sample-only history: treated as zero
+        history (sample is excluded).
+      - Conflicting labels for the same merchant: memory keeps counts per
+        category; recency decay picks the current habit; if the top two are
+        close, show chips instead of pre-selecting.
+      - One category dominates (e.g. 90% Food): smoothed priors plus the
+        "Other" penalty; check per-class recall on the benchmark, not just
+        overall accuracy.
+      - Undo, delete, version restore, backup restore, multi-tab edits:
+        all change `expenses`, which triggers a rebuild. No separate state
+        to keep in sync.
+      - Future custom categories: the model reads the label set from the
+        data and CATEGORIES at build time, so new labels just work. Labels
+        no longer in CATEGORIES are skipped.
+
+6.3 Runtime failures
+      - Any exception in suggest() is caught; the form behaves exactly as
+        it does today (no suggestion) and logs once to the console.
+        Suggestions can never block saving an expense.
+      - Wrap the suggestion UI in a small error boundary.
+      - Worker unavailable or fails: fall back to synchronous build, and
+        if the data is very large, to lexicon-only.
+      - localStorage blocked or full: the app already shows a recovery
+        screen for expenses; ML writes (feedback, settings) fail silently
+        and default to "on, no metrics".
+      - Corrupt feedback log or settings JSON: discard and recreate; never
+        surface an error for it.
+      - SSR: ML hooks run only in effects/useMemo inside client components
+        and return "no suggestion" until hydrated, so there is no
+        hydration mismatch.
+
+6.4 Quality safeguards
+      - Thresholds come from replay evaluation, not guesswork.
+      - If the local acceptance rate of pre-selected suggestions drops
+        below 80% over the last 50, temporarily raise the pre-select
+        threshold (self-correcting caution).
+
+
+--------------------------------------------------------------------------------
+7. DEPLOYMENT AND MAINTENANCE
+--------------------------------------------------------------------------------
+
+7.1 Deployment
+      - Same static Next.js build and Linux packaging as today
+        (scripts/package-linux.mjs). No servers, no model hosting, no new
+        runtime dependencies for phases 1 to 3.
+      - Feature flag: a "ledgerly:ml:settings:v1" setting defaulting to OFF
+        during development, then ON by default once the benchmark gates
+        pass and it has been tried by hand.
+      - Rollback: flip the default and ship. Because the model is derived
+        and meta is optional, turning it off leaves no stale data.
+      - Bundle check: track the ML module's size in CI (fail above 15 KB
+        gzipped). Load the phase 4 embedding model only on demand.
+
+7.2 Versioning
+      - MODEL_VERSION constant, bumped whenever features, weights or
+        thresholds change. Written into meta.suggestion so local metrics can
+        be split by version.
+      - LEXICON_VERSION for lexicon edits.
+      - No data migrations needed for model changes (derived model).
+      - ExpenseMeta changes follow the existing tolerant-loading pattern.
+
+7.3 Maintenance
+      - CI accuracy gate: prequential replay on the fixed-seed synthetic
+        benchmark; fail the build if top-1/top-3/calibration fall below the
+        3.5 thresholds or regress by more than 2 points from the committed
+        baseline.
+      - Lexicon upkeep: review each release; add a test that every lexicon
+        keyword maps to a valid category and has no duplicates or
+        conflicts.
+      - Since there's no telemetry, real-world quality signals come from
+        the user's own local accuracy panel and from bug reports.
+        Optionally, later: an explicit "Export diagnostics" button that
+        downloads aggregate, text-free metrics a user can choose to send.
+      - Performance check: a benchmark test that builds a 5,000-expense
+        model and asserts the time budget (with generous CI headroom).
+
+
+--------------------------------------------------------------------------------
+8. TESTING STRATEGY
+--------------------------------------------------------------------------------
+
+The project has no test runner yet, and every new piece of code needs
+automated tests.
+
+8.1 Tooling
+      - Add Vitest (fast, native TypeScript, works with the "@/" path alias)
+        plus @testing-library/react and jsdom for component tests.
+      - npm scripts: "test", "test:watch", and run "test" alongside
+        "build" and "lint" before every commit.
+      - Note: package.json requires Node >= 26 (.nvmrc, engine-strict).
+        Install and test on Node 26 so results match.
+
+8.2 Unit tests (src/lib/ml/*.test.ts)
+      - normalize: noise stripping, Unicode, card prefixes, idempotence,
+        linear-time on adversarial input.
+      - features: n-gram generation, amount/date bands, recurrence flag,
+        feature cap.
+      - naiveBayes: hand-computed probabilities on tiny datasets, smoothing,
+        weights, recency decay, determinism.
+      - memory: exact hit, prefix hit, fuzzy hit, conflict resolution.
+      - suggester: thresholds -> preselect/chips/none, "Other" penalty,
+        sample exclusion, shared-import down-weighting, error fallback.
+      - lexicon integrity (7.3).
+      - privacy: no network APIs in src/lib/ml; every export template
+        output free of meta.
+      - storage: legacy records without meta load; meta round-trips; ML
+        keys don't use the "expense-tracker:" prefix.
+
+8.3 Evaluation tests (prequential replay)
+      For each synthetic user, go through expenses in createdAt order:
+      predict, record, then learn. Assert the 3.5 thresholds, per-class
+      recall, calibration error, and personalization (two users, same
+      merchant, different answers). Fixed seeds make it deterministic.
+
+8.4 Component tests
+      - ExpenseForm: typing "uber" pre-selects Transportation; a manual
+        choice is never overwritten; chips appear at medium confidence;
+        edit mode never auto-changes; the aria-live announcement fires; the
+        suggestion error boundary falls back cleanly.
+      - ExpenseProvider: meta is attached on add/edit; sample data is
+        tagged.
+
+8.5 Manual checks before turning it on by default
+      Desktop and mobile layouts, keyboard-only use, a screen reader pass,
+      and a large (5,000+) dataset for input lag.
+
+
+--------------------------------------------------------------------------------
+9. IMPLEMENTATION PHASES
+--------------------------------------------------------------------------------
+
+Phase 0: Foundations
+  - Add Vitest and Testing Library, npm test script, first smoke tests.
+  - Add ExpenseMeta to types; thread optional meta through ExpenseProvider
+    (addExpense, addMany, updateExpense) and tag sample and import sources.
+  - Tests for storage compatibility and the export privacy boundary.
+
+Phase 1: Engine (no UI)
+  - src/lib/ml/normalize.ts, features.ts, lexicon.ts, memory.ts,
+    naiveBayes.ts, suggester.ts, calibration constants.
+  - src/lib/ml/benchmark/ synthetic generator and replay evaluator.
+  - Tune smoothing, weights and thresholds; commit the baseline metrics.
+  - Exit: all 3.5 criteria met in CI.
+
+Phase 2: Form integration
+  - useCategorySuggestions(expenses) hook (memoized model build) and the
+    form changes from section 5: field reorder, pre-select, chips, reason,
+    aria-live, error boundary, feature flag off by default.
+  - Record meta.suggestion on save; feedback log.
+  - Exit: component tests pass, manual checks done, flag switched on.
+
+Phase 3: Learning loop and transparency
+  - "Also change N similar expenses?" after a correction.
+  - Settings panel: toggle, local accuracy, reset learning.
+  - Import review of likely mis-categorizations.
+  - Web Worker build for large datasets; adaptive threshold (6.4).
+  - Try online logistic regression against NB with replay; switch only
+    if it clearly wins.
+
+Phase 4 (optional, opt-in): Semantic model
+  - Lazy-loaded small sentence-embedding model for kNN over the user's
+    own past expenses, offered as an opt-in download in settings. Only if
+    replay shows a meaningful cold-start gain over the lexicon.
+
+
+--------------------------------------------------------------------------------
+10. OPEN QUESTIONS
+--------------------------------------------------------------------------------
+
+  Q1. Are user-defined categories on the roadmap? The design supports
+      them, but the UI and lexicon mapping would need work.
+  Q2. Is reordering the form (Description before Category) acceptable, or
+      should we keep the current layout and use chips under Description?
+  Q3. Should pre-selection be on by default, or chips-only until the user
+      opts in? (Recommendation: pre-select at >= 0.85, because the
+      benchmark gate keeps those suggestions >= 95% correct.)
+  Q4. Is there ever going to be a server or account system? If yes, an
+      opt-in global model becomes possible; if not, we keep everything
+      on-device permanently.
+  Q5. Which regions or languages should the first lexicon cover?
+
+================================================================================
+END OF PLAN
+================================================================================
