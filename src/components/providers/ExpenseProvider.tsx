@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Expense, ExpenseInput, ExpenseMeta } from "@/lib/types";
 import { generateId, loadExpenses, saveExpenses } from "@/lib/storage";
+import { DEFAULT_META, applyUpdate } from "@/lib/expenseMeta";
 import { useToast } from "./ToastProvider";
 
 type Status = "loading" | "ready" | "error";
@@ -30,9 +31,9 @@ export function useExpenses(): ExpenseContextValue {
   return ctx;
 }
 
-function create(input: ExpenseInput): Expense {
+function create(input: ExpenseInput, meta: ExpenseMeta = DEFAULT_META): Expense {
   const now = new Date().toISOString();
-  return { ...input, id: generateId(), createdAt: now, updatedAt: now };
+  return { ...input, id: generateId(), createdAt: now, updatedAt: now, meta: { ...meta } };
 }
 
 export function ExpenseProvider({ children }: { children: ReactNode }) {
@@ -88,14 +89,15 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, [load]);
 
-  const addExpense = useCallback((input: ExpenseInput) => {
-    const expense = create(input);
+  const addExpense = useCallback((input: ExpenseInput, meta?: ExpenseMeta) => {
+    const expense = create(input, meta);
     setExpenses((list) => [expense, ...list]);
     return expense;
   }, []);
 
-  const updateExpense = useCallback((id: string, input: ExpenseInput) => {
-    setExpenses((list) => list.map((e) => (e.id === id ? { ...e, ...input, updatedAt: new Date().toISOString() } : e)));
+  const updateExpense = useCallback((id: string, input: ExpenseInput, metaPatch?: Partial<ExpenseMeta>) => {
+    const now = new Date().toISOString();
+    setExpenses((list) => list.map((e) => (e.id === id ? applyUpdate(e, input, metaPatch, now) : e)));
   }, []);
 
   const deleteExpense = useCallback(
@@ -114,8 +116,8 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addMany = useCallback((inputs: ExpenseInput[]) => {
-    setExpenses((list) => [...inputs.map(create), ...list]);
+  const addMany = useCallback((inputs: ExpenseInput[], meta?: ExpenseMeta) => {
+    setExpenses((list) => [...inputs.map((input) => create(input, meta)), ...list]);
   }, []);
 
   const replaceAll = useCallback((items: Expense[]) => setExpenses(items), []);

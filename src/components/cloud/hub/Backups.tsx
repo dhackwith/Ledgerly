@@ -44,7 +44,7 @@ export function Backups() {
 
   const doImport = (mode: "merge" | "replace") => {
     if (!incoming) return;
-    const { added, skipped } = importExpenses(incoming.list, mode);
+    const { added, skipped } = importExpenses(incoming.list, mode, "import");
     notify(mode === "replace" ? `Replaced your data with ${plural(added, "expense")}` : `Imported ${plural(added, "expense")}${skipped ? `, skipped ${plural(skipped, "duplicate")}` : ""}`);
     setIncoming(null);
   };

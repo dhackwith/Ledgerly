@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Expense, ExpenseInput } from "@/lib/types";
+import type { Expense, ExpenseInput, SuggestionRecord } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -46,12 +46,12 @@ export function ExpenseDialogProvider({ children }: { children: ReactNode }) {
 
   const confirmDelete = useCallback((expense: Expense) => setState({ kind: "delete", expense }), []);
 
-  const handleSubmit = (data: ExpenseInput) => {
+  const handleSubmit = (data: ExpenseInput, suggestion?: SuggestionRecord) => {
     if (state.kind === "edit") {
-      updateExpense(state.expense.id, data);
+      updateExpense(state.expense.id, data, suggestion ? { suggestion } : undefined);
       notify("Expense updated");
     } else {
-      addExpense(data);
+      addExpense(data, suggestion ? { source: "manual", suggestion } : { source: "manual" });
       notify(`Added ${formatCurrency(data.amount)} for ${data.description}`);
     }
     close();
