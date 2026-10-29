@@ -7,6 +7,7 @@ import { formatMonthKey, monthKey, todayISO } from "@/lib/format";
 import { useExpenses } from "@/components/providers/ExpenseProvider";
 import { useExpenseDialogs } from "@/components/providers/ExpenseDialogProvider";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
+import { BudgetAlertBanner, BudgetsCard } from "@/components/dashboard/BudgetsCard";
 import { CategoryDonut, DailyBarChart, MonthlyBarChart } from "@/components/dashboard/Charts";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
 import { SampleDataButton } from "@/components/SampleDataButton";
@@ -40,6 +41,8 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-500">An overview of where your money is going.</p>
       </div>
 
+      <BudgetAlertBanner />
+
       {status === "loading" && (
         <>
           <CardSkeletonGrid />
@@ -72,6 +75,8 @@ export default function DashboardPage() {
       {status === "ready" && expenses.length > 0 && (
         <>
           <SummaryCards stats={data.stats} />
+
+          <BudgetsCard />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Monthly spending" subtitle="Last 6 months">
