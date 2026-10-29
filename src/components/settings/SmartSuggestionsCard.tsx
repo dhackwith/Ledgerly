@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useState, useSyncExternalStore } from "react";
 import { ML_FEEDBACK_KEY } from "@/lib/ml/contract";
-import { readFeedback, summarizeFeedback, type AcceptanceStats, type FeedbackSummary } from "@/lib/ml/feedback";
+import { readFeedback, subscribeFeedback, summarizeFeedback, type AcceptanceStats, type FeedbackSummary } from "@/lib/ml/feedback";
 import { getMlSettings, getServerMlSettings, resetLearning, setMlSettings, subscribeMlSettings } from "@/lib/ml/settings";
 import { formatPercent } from "@/lib/format";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -24,19 +24,22 @@ export function SmartSuggestionsCard() {
 
   const refresh = useCallback(() => setSummary(summarizeFeedback(readFeedback(), ACCURACY_WINDOW)), []);
 
-  // The log is read after mount (it lives in localStorage), again after a reset, and when another tab writes it.
+  // The log lives in localStorage, so it's read after mount, then whenever this tab or another one changes it.
   useEffect(() => {
     refresh();
     const onStorage = (e: StorageEvent) => {
       if (e.key === ML_FEEDBACK_KEY || e.key === null) refresh();
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [refresh, settings.resetAt]);
+    const unsubscribe = subscribeFeedback(refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      unsubscribe();
+    };
+  }, [refresh]);
 
   const confirmReset = () => {
     resetLearning();
-    refresh();
     setConfirmOpen(false);
     notify("Learning reset. Your expenses and categories are unchanged.");
   };

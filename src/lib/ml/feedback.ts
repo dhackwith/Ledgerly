@@ -8,6 +8,14 @@ export const MAX_FEEDBACK_EVENTS = 500;
 const DISPLAYS: readonly SuggestionDisplay[] = ["preselected", "chips", "none"];
 const MAX_VERSION_LENGTH = 40;
 
+const listeners = new Set<() => void>();
+
+/** Called after this tab records or clears feedback (other tabs: listen for the storage event). Returns an unsubscribe function. */
+export function subscribeFeedback(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 function isCategory(value: unknown): value is Category {
   return typeof value === "string" && (CATEGORIES as readonly string[]).includes(value);
 }
@@ -76,8 +84,9 @@ export function recordFeedback(event: FeedbackEvent): void {
     const events = [clean, ...readFeedback()].slice(0, MAX_FEEDBACK_EVENTS);
     store.setItem(ML_FEEDBACK_KEY, JSON.stringify(events));
   } catch {
-    /* quota or blocked storage: metrics are optional, skip silently */
+    return; // quota or blocked storage: metrics are optional, skip silently
   }
+  listeners.forEach((l) => l());
 }
 
 export function clearFeedback(): void {
@@ -86,6 +95,7 @@ export function clearFeedback(): void {
   } catch {
     /* storage blocked */
   }
+  listeners.forEach((l) => l());
 }
 
 export interface AcceptanceStats {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ML_FEEDBACK_KEY, type FeedbackEvent } from "../contract";
-import { MAX_FEEDBACK_EVENTS, clearFeedback, readFeedback, recordFeedback, sanitizeFeedbackEvent, summarizeFeedback } from "../feedback";
+import { MAX_FEEDBACK_EVENTS, clearFeedback, readFeedback, recordFeedback, sanitizeFeedbackEvent, subscribeFeedback, summarizeFeedback } from "../feedback";
 
 // Node 26 has its own localStorage (unusable without --localstorage-file) that shadows jsdom's. Use jsdom's.
 const jsdomWindow = (globalThis as unknown as { jsdom: { window: Window } }).jsdom.window;
@@ -129,6 +129,20 @@ describe("feedback log", () => {
     clearFeedback();
     expect(localStorage.getItem(ML_FEEDBACK_KEY)).toBeNull();
     expect(readFeedback()).toEqual([]);
+  });
+
+  it("notifies subscribers after a record or clear, but not for rejected events", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeFeedback(listener);
+    recordFeedback(event());
+    expect(listener).toHaveBeenCalledTimes(1);
+    recordFeedback(event({ final: "Nope" as FeedbackEvent["final"] }));
+    expect(listener).toHaveBeenCalledTimes(1);
+    clearFeedback();
+    expect(listener).toHaveBeenCalledTimes(2);
+    unsubscribe();
+    recordFeedback(event());
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 
   it("is a no-op without window (server rendering)", () => {

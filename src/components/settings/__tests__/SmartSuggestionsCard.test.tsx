@@ -79,6 +79,14 @@ describe("SmartSuggestionsCard", () => {
     expect(chips.textContent).toContain("100% (1 of 1)");
   });
 
+  it("updates when feedback is recorded while the card is open", () => {
+    renderCard();
+    expect(screen.getByText(/No suggestions yet/)).toBeTruthy();
+    act(() => recordFeedback(event({ final: "Bills" })));
+    expect(screen.getByText("Pre-selected").parentElement!.textContent).toContain("0% (0 of 1)");
+    expect(screen.getByText("accepted over the last 1 suggestion")).toBeTruthy();
+  });
+
   it("says everything stays on the device", () => {
     renderCard();
     expect(screen.getByText("Everything runs on this device. Nothing is sent anywhere.")).toBeTruthy();
