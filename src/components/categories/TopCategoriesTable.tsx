@@ -12,6 +12,18 @@ function expensesLabel(count: number): string {
   return `${count} ${count === 1 ? "expense" : "expenses"}`;
 }
 
+/** Decorative: the percent shown next to it carries the value. */
+function ShareBar({ row, className }: { row: RankedCategory; className: string }) {
+  return (
+    <span className={`block overflow-hidden rounded-full bg-slate-100 ${className}`} aria-hidden>
+      <span
+        className="block h-full rounded-full"
+        style={{ width: `${Math.max(row.share * 100, 2)}%`, backgroundColor: CATEGORY_META[row.category].color }}
+      />
+    </span>
+  );
+}
+
 interface Props {
   rows: RankedCategory[];
   total: number;
@@ -31,7 +43,7 @@ export function TopCategoriesTable({ rows, total, count }: Props) {
             <th scope="col" className="px-3 py-3 font-medium">
               Category
             </th>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="hidden px-3 py-3 font-medium sm:table-cell">
               Share
             </th>
             <th scope="col" className="hidden px-3 py-3 text-right font-medium sm:table-cell">
@@ -52,17 +64,16 @@ export function TopCategoriesTable({ rows, total, count }: Props) {
               </td>
               <th scope="row" className="px-3 py-3 text-left font-normal">
                 <CategoryBadge category={row.category} />
-                <span className="mt-1 block text-xs text-slate-500 sm:hidden">{expensesLabel(row.count)}</span>
+                {/* Phones have no room for the Share and Expenses columns, so both go under the badge. */}
+                <span className="mt-1.5 flex items-center gap-2 text-xs text-slate-500 sm:hidden">
+                  <ShareBar row={row} className="h-1.5 w-16 shrink-0" />
+                  <span className="tabular-nums">{formatShare(row.share)}</span>
+                  <span>· {expensesLabel(row.count)}</span>
+                </span>
               </th>
-              <td className="px-3 py-3">
+              <td className="hidden px-3 py-3 sm:table-cell">
                 <div className="flex items-center gap-2">
-                  {/* Decorative: the percent next to it carries the value. */}
-                  <span className="block h-2 min-w-[2.5rem] max-w-[10rem] flex-1 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-                    <span
-                      className="block h-full rounded-full"
-                      style={{ width: `${Math.max(row.share * 100, 2)}%`, backgroundColor: CATEGORY_META[row.category].color }}
-                    />
-                  </span>
+                  <ShareBar row={row} className="h-2 min-w-[2.5rem] max-w-[10rem] flex-1" />
                   <span className="w-10 shrink-0 text-right tabular-nums text-slate-700">{formatShare(row.share)}</span>
                 </div>
               </td>
@@ -73,10 +84,11 @@ export function TopCategoriesTable({ rows, total, count }: Props) {
         </tbody>
         <tfoot>
           <tr className="border-t border-slate-200 bg-slate-50/60">
-            <th scope="row" colSpan={3} className="px-5 py-3 text-left font-semibold text-slate-700">
+            <th scope="row" colSpan={2} className="px-5 py-3 text-left font-semibold text-slate-700">
               Period total
               <span className="ml-2 text-xs font-normal text-slate-500 sm:hidden">{expensesLabel(count)}</span>
             </th>
+            <td className="hidden sm:table-cell" />
             <td className="hidden px-3 py-3 text-right tabular-nums text-slate-500 sm:table-cell">{count}</td>
             <td className="px-5 py-3 text-right font-semibold tabular-nums text-slate-900">{formatCurrency(total)}</td>
           </tr>
