@@ -1,11 +1,22 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CATEGORIES, type Expense, type ExpenseInput, type SuggestionRecord } from "@/lib/types";
+import {
+  CATEGORIES,
+  type Category,
+  type Expense,
+  type ExpenseInput,
+  type SuggestionDisplay,
+  type SuggestionRecord,
+} from "@/lib/types";
 import { CATEGORY_META } from "@/lib/categories";
 import { todayISO } from "@/lib/format";
 import { MAX_DESCRIPTION, validateExpense, type ExpenseFormErrors, type ExpenseFormValues } from "@/lib/validation";
+import { MODEL_VERSION } from "@/lib/ml";
+import { recordFeedback } from "@/lib/ml/feedback";
 import { Button } from "@/components/ui/Button";
+import { CategorySuggestions, SUGGESTION_REASON_ID, SuggestionErrorBoundary } from "./CategorySuggestions";
+import { useCategorySuggestions } from "./useCategorySuggestions";
 
 interface ExpenseFormProps {
   initial?: Expense;
@@ -13,6 +24,9 @@ interface ExpenseFormProps {
   onSubmit: (data: ExpenseInput, suggestion?: SuggestionRecord) => void | Promise<void>;
   onCancel: () => void;
 }
+
+/** Visual order, used to focus the first invalid field. */
+const FIELD_ORDER: Array<keyof ExpenseFormValues> = ["amount", "description", "category", "date"];
 
 const inputBase =
   "block w-full rounded-lg border-0 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-inset placeholder:text-slate-400 focus:ring-2 focus:ring-inset";
@@ -22,6 +36,8 @@ function fieldClass(hasError: boolean): string {
 }
 
 export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
+  const isEdit = !!initial;
+  // In create mode `category` stays "" until the user picks one; a pre-selected suggestion is applied on top.
   const [values, setValues] = useState<ExpenseFormValues>({
     date: initial?.date ?? todayISO(),
     amount: initial ? initial.amount.toFixed(2) : "",
@@ -32,44 +48,100 @@ export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
   const [touched, setTouched] = useState<Partial<Record<keyof ExpenseFormValues, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [suggestionsFailed, setSuggestionsFailed] = useState(false);
+
+  const { result: engineResult, enabled } = useCategorySuggestions({
+    description: values.description,
+    amount: values.amount,
+    date: values.date,
+    mode: isEdit ? "edit" : "create",
+    currentCategory: initial?.category,
+  });
+
+  const suggestion = suggestionsFailed ? null : engineResult;
+  const suggested: Category | undefined = suggestion?.ranked[0]?.category;
+  let display: SuggestionDisplay = "none";
+  if (suggestion && suggested) {
+    // Edit mode never pre-selects: it shows chips only when the engine asks for them.
+    display = isEdit ? (suggestion.display === "chips" ? "chips" : "none") : suggestion.display;
+  }
+  // Pre-select only while the user hasn't chosen. Their choice is never changed.
+  const autoCategory = display === "preselected" && !values.category ? suggested : undefined;
+  const withSuggestion = (v: ExpenseFormValues): ExpenseFormValues =>
+    v.category || !autoCategory ? v : { ...v, category: autoCategory };
+  const category = values.category || autoCategory || "";
+  const categoryError = category ? undefined : errors.category;
 
   const update = (field: keyof ExpenseFormValues, value: string) => {
     const next = { ...values, [field]: value };
     setValues(next);
     // Re-validate live once the user has interacted with the field.
-    if (touched[field] || errors[field]) setErrors(validateExpense(next).errors);
+    if (touched[field] || errors[field]) setErrors(validateExpense(withSuggestion(next)).errors);
   };
 
   const blur = (field: keyof ExpenseFormValues) => {
     setTouched((t) => ({ ...t, [field]: true }));
-    const fieldError = validateExpense(values).errors[field];
+    const fieldError = validateExpense(withSuggestion(values)).errors[field];
     setErrors((e) => ({ ...e, [field]: fieldError }));
+  };
+
+  const chooseCategory = (c: Category) => {
+    setTouched((t) => ({ ...t, category: true }));
+    update("category", c);
+    setErrors((e) => ({ ...e, category: undefined }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    const result = validateExpense(values);
+    // The submitted category is exactly the one shown as selected, so nothing unseen is ever saved.
+    const result = validateExpense(withSuggestion(values));
     setErrors(result.errors);
     setTouched({ date: true, amount: true, category: true, description: true });
     if (!result.data) {
-      const firstInvalid = (Object.keys(result.errors) as Array<keyof ExpenseFormValues>)[0];
+      const firstInvalid = FIELD_ORDER.find((f) => result.errors[f]);
       document.getElementById(`expense-${firstInvalid}`)?.focus();
       return;
     }
+    const data = result.data;
+    const record: SuggestionRecord | undefined =
+      suggestion && suggested && display !== "none"
+        ? {
+            category: suggested,
+            confidence: suggestion.confidence,
+            shown: display,
+            accepted: data.category === suggested,
+            modelVersion: suggestion.modelVersion,
+          }
+        : undefined;
     setSubmitting(true);
     try {
-      await onSubmit(result.data);
+      await (record ? onSubmit(data, record) : onSubmit(data));
     } catch (err) {
       console.error(err);
       setSubmitError("Something went wrong saving this expense. Please try again.");
       setSubmitting(false);
+      return;
+    }
+    // Feedback is best effort and must never affect saving.
+    if (!record && !enabled) return;
+    try {
+      recordFeedback({
+        t: new Date().toISOString(),
+        predicted: record?.category ?? null,
+        confidence: record?.confidence ?? 0,
+        final: data.category,
+        shown: record?.shown ?? "none",
+        modelVersion: record?.modelVersion ?? engineResult?.modelVersion ?? MODEL_VERSION,
+      });
+    } catch (err) {
+      console.error("Failed to record suggestion feedback", err);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div>
           <label htmlFor="expense-amount" className="block text-sm font-medium text-slate-700">
             Amount
@@ -104,6 +176,87 @@ export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
           )}
         </div>
 
+        <div className="sm:col-span-2">
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="expense-description" className="block text-sm font-medium text-slate-700">
+              Description
+            </label>
+            <span className={`text-xs tabular-nums ${values.description.length > MAX_DESCRIPTION ? "text-red-600" : "text-slate-400"}`}>
+              {values.description.length}/{MAX_DESCRIPTION}
+            </span>
+          </div>
+          <input
+            id="expense-description"
+            type="text"
+            autoComplete="off"
+            placeholder="e.g. Weekly groceries"
+            value={values.description}
+            onChange={(e) => update("description", e.target.value)}
+            onBlur={() => blur("description")}
+            aria-invalid={!!errors.description}
+            aria-describedby={errors.description ? "expense-description-error" : undefined}
+            className={`${fieldClass(!!errors.description)} mt-1.5`}
+          />
+          {errors.description && (
+            <p id="expense-description-error" className="mt-1.5 text-xs text-red-600">
+              {errors.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <fieldset>
+        <legend id="expense-category" tabIndex={-1} className="block text-sm font-medium text-slate-700 outline-none">
+          Category
+        </legend>
+        <SuggestionErrorBoundary onError={() => setSuggestionsFailed(true)}>
+          <CategorySuggestions
+            display={display}
+            ranked={suggestion?.ranked ?? []}
+            reason={suggestion?.reason ?? null}
+            autoSelected={!!autoCategory}
+            onChoose={chooseCategory}
+          />
+        </SuggestionErrorBoundary>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-labelledby="expense-category">
+          {CATEGORIES.map((c) => {
+            const selected = category === c;
+            const tagged = display === "preselected" && suggested === c;
+            return (
+              <label
+                key={c}
+                className={`flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-3 py-2.5 text-sm ring-1 ring-inset transition ${
+                  selected
+                    ? "bg-brand-50 font-semibold text-brand-700 ring-2 ring-brand-600"
+                    : `bg-white text-slate-700 hover:bg-slate-50 ${categoryError ? "ring-red-300" : "ring-slate-300"}`
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="category"
+                  value={c}
+                  checked={selected}
+                  onChange={() => chooseCategory(c)}
+                  // Clicking the already pre-selected tile doesn't fire onChange; this makes it the user's choice.
+                  onClick={() => chooseCategory(c)}
+                  aria-describedby={tagged ? SUGGESTION_REASON_ID : undefined}
+                  className="sr-only"
+                />
+                <span aria-hidden>{CATEGORY_META[c].icon}</span>
+                {c}
+                {tagged && (
+                  <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-brand-700">
+                    Suggested
+                  </span>
+                )}
+              </label>
+            );
+          })}
+        </div>
+        {categoryError && <p className="mt-1.5 text-xs text-red-600">{categoryError}</p>}
+      </fieldset>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div>
           <label htmlFor="expense-date" className="block text-sm font-medium text-slate-700">
             Date
@@ -125,71 +278,6 @@ export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
             </p>
           )}
         </div>
-      </div>
-
-      <fieldset>
-        <legend id="expense-category" tabIndex={-1} className="block text-sm font-medium text-slate-700 outline-none">
-          Category
-        </legend>
-        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-labelledby="expense-category">
-          {CATEGORIES.map((c) => {
-            const selected = values.category === c;
-            return (
-              <label
-                key={c}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm ring-1 ring-inset transition ${
-                  selected
-                    ? "bg-brand-50 font-semibold text-brand-700 ring-2 ring-brand-600"
-                    : `bg-white text-slate-700 hover:bg-slate-50 ${errors.category ? "ring-red-300" : "ring-slate-300"}`
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="category"
-                  value={c}
-                  checked={selected}
-                  onChange={() => {
-                    setTouched((t) => ({ ...t, category: true }));
-                    update("category", c);
-                    setErrors((e) => ({ ...e, category: undefined }));
-                  }}
-                  className="sr-only"
-                />
-                <span aria-hidden>{CATEGORY_META[c].icon}</span>
-                {c}
-              </label>
-            );
-          })}
-        </div>
-        {errors.category && <p className="mt-1.5 text-xs text-red-600">{errors.category}</p>}
-      </fieldset>
-
-      <div>
-        <div className="flex items-baseline justify-between">
-          <label htmlFor="expense-description" className="block text-sm font-medium text-slate-700">
-            Description
-          </label>
-          <span className={`text-xs tabular-nums ${values.description.length > MAX_DESCRIPTION ? "text-red-600" : "text-slate-400"}`}>
-            {values.description.length}/{MAX_DESCRIPTION}
-          </span>
-        </div>
-        <input
-          id="expense-description"
-          type="text"
-          autoComplete="off"
-          placeholder="e.g. Weekly groceries"
-          value={values.description}
-          onChange={(e) => update("description", e.target.value)}
-          onBlur={() => blur("description")}
-          aria-invalid={!!errors.description}
-          aria-describedby={errors.description ? "expense-description-error" : undefined}
-          className={`${fieldClass(!!errors.description)} mt-1.5`}
-        />
-        {errors.description && (
-          <p id="expense-description-error" className="mt-1.5 text-xs text-red-600">
-            {errors.description}
-          </p>
-        )}
       </div>
 
       {submitError && (
