@@ -10,6 +10,7 @@ A personal expense tracker built with Next.js 14 (App Router), TypeScript, Tailw
 - **Expense list** with search, category filter, date range (plus quick presets), sorting, a running total of the filtered results, and "Show more" paging.
 - **CSV export** of whatever the list currently shows (filters and sort applied). Cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
 - **Dashboard**: this month's spending versus last month, all-time total, daily average, top category, a 6-month bar chart, a category donut with a labeled breakdown, a 30-day daily chart, and recent expenses.
+- **Budgets**: a monthly limit per category, edited inline on the Budgets page. Progress bars show spend against each limit (with an "80% used" / "Over by $X" / "On track" label, never colour alone), a projected month-end hint when you're close, a compact card and an over-budget banner on the dashboard, and a toast the moment a category crosses 80% or goes over.
 - **Loading skeletons, empty states and error handling**, including a recovery screen if saved data is corrupted or storage is blocked.
 - **Responsive**: a top nav on desktop; a bottom tab bar with a floating add button on mobile, where dialogs open as bottom sheets.
 - **Multi-tab sync**: changes in one tab show up in other open tabs.
@@ -80,11 +81,13 @@ How it works:
 11. **Export.** Click **Export CSV**. The downloaded file contains exactly the rows currently shown.
 12. **Mobile.** Narrow the browser or use device mode in dev tools. Use the bottom bar and the round **+** button.
 13. **Keyboard.** Dialogs open with focus on the first field, trap Tab inside, and close with Escape.
+14. **Budgets.** Go to **Budgets**, type a limit next to **Food** (for example `100`) and press Enter. The summary strip and progress bar appear, and the dashboard shows a **Budgets** card. Set the limit below what you've already spent this month to see the "Over by" label, the red banner on the dashboard, and the alert toast when a new expense pushes a category over. Clear the field to remove the limit.
 
 To reset all data, run this in the browser console:
 
 ```js
 localStorage.removeItem("expense-tracker:expenses:v1");
+localStorage.removeItem("expense-tracker:budgets:v1");
 ```
 
 ## Project structure
@@ -95,16 +98,20 @@ src/
     layout.tsx            Root layout, font, app shell
     page.tsx              Dashboard
     expenses/page.tsx     Expense list with filters and export
+    budgets/page.tsx      Monthly limits per category with progress
     not-found.tsx
   components/
     layout/AppShell.tsx   Header, mobile nav, providers, storage error banner
-    providers/            Expense state, toast notifications, add/edit/delete dialogs
+    providers/            Expense state, budgets, toast notifications, add/edit/delete dialogs
     expenses/             Form, list, filter bar
-    dashboard/            Summary cards and charts
+    budgets/              Budget progress bar and state label
+    dashboard/            Summary cards, budgets card and charts
     ui/                   Button, Card, Modal, Skeleton, icons, badges
   lib/
     types.ts              Expense types and categories
     storage.ts            localStorage load/save with validation
+    budgets.ts            Budget progress, summary and month-end projection
+    budgetStorage.ts      localStorage load/save for budget limits
     validation.ts         Form validation rules
     analytics.ts          Filtering, sorting, totals, stats, sample data
     csv.ts                CSV generation and download
