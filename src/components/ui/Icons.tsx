@@ -87,3 +87,25 @@ export const SparklesIcon = (p: IconProps) => (
     <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />
   </svg>
 );
+
+export const AnalyticsIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+);
+
+export const LightbulbIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M9 18h6M10 22h4" />
+    <path d="M12 2a7 7 0 00-4 12.74V17h8v-2.26A7 7 0 0012 2z" />
+  </svg>
+);
+
+export const RepeatIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" {...base} aria-hidden {...p}>
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11V9a4 4 0 014-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v2a4 4 0 01-4 4H3" />
+  </svg>
+);
