@@ -219,14 +219,15 @@ export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
             onChoose={chooseCategory}
           />
         </SuggestionErrorBoundary>
-        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-labelledby="expense-category">
+        {/* mt-3 and gap-y-3 leave room for the "Suggested" tag that overhangs a tile's top edge. */}
+        <div className="mt-3 grid grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-3" role="radiogroup" aria-labelledby="expense-category">
           {CATEGORIES.map((c) => {
             const selected = category === c;
             const tagged = display === "preselected" && suggested === c;
             return (
               <label
                 key={c}
-                className={`flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-3 py-2.5 text-sm ring-1 ring-inset transition ${
+                className={`relative flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm ring-1 ring-inset transition ${
                   selected
                     ? "bg-brand-50 font-semibold text-brand-700 ring-2 ring-brand-600"
                     : `bg-white text-slate-700 hover:bg-slate-50 ${categoryError ? "ring-red-300" : "ring-slate-300"}`
@@ -245,8 +246,12 @@ export function ExpenseForm({ initial, onSubmit, onCancel }: ExpenseFormProps) {
                 />
                 <span aria-hidden>{CATEGORY_META[c].icon}</span>
                 {c}
+                {/* Sits on the tile's top edge, so a suggestion never changes tile height or shifts the form. */}
                 {tagged && (
-                  <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-brand-700">
+                  <span
+                    data-testid="suggested-tag"
+                    className="absolute -top-2 right-2 rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-brand-700 ring-1 ring-brand-200"
+                  >
                     Suggested
                   </span>
                 )}

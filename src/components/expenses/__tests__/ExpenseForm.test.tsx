@@ -100,6 +100,18 @@ describe("ExpenseForm pre-selection", () => {
     expect(radio("Transportation").getAttribute("aria-describedby")).toBe(reason.closest("p")!.id);
   });
 
+  it("keeps the tag out of the tile's layout, so tiles don't grow when a suggestion appears", async () => {
+    engine({ uber: suggestion("preselected", [["Transportation", 0.92]]) });
+    const { user, description } = renderForm();
+    await user.type(description, "uber");
+
+    const tag = await screen.findByTestId("suggested-tag");
+    expect(tag.classList).toContain("absolute");
+    const tile = radio("Transportation").closest("label")!;
+    expect(tile.classList).toContain("relative");
+    expect(tile.classList).not.toContain("flex-wrap");
+  });
+
   it("follows the prediction while the user hasn't chosen", async () => {
     engine({
       uber: suggestion("preselected", [["Transportation", 0.92]]),
